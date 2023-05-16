@@ -1,0 +1,101 @@
+(ns hti.re-dash
+  (:require [cljd.flutter :as f]
+            ["dart:async" :as da]))
+
+
+;; Database
+
+(defonce ^:private app-db (atom {}))
+
+
+;; Subscriptions
+
+(defonce ^:private subscriptions (atom {}))
+
+(defn reg-sub
+  [subscription-id f]
+  (swap! subscriptions assoc subscription-id f))
+
+(defn subscribe
+  [query-vec]
+  (let [subscription-id (first query-vec)]
+    (if-let [subscription-fn (subscription-id @subscriptions)]
+      (f/$ (subscription-fn (f/<! app-db) query-vec))
+      (throw (Exception. (str "Subscription not found: " subscription-id))))))
+
+
+;; Effects
+
+(defonce ^:private effects (atom {}))
+
+(defn reg-fx
+  [effect-id f]
+  (swap! effects assoc effect-id f))
+
+(defn ^:async execute!
+  [effect-id effect]
+  (let [effect-fn (effect-id @effects)]
+    (when-not effect-fn (throw (Exception. (str "Effect not found: " effect-id))))
+    (effect-fn effect)))
+
+
+;; Events
+
+(defonce ^:private events (atom {}))
+
+(defn reg-event-fx
+  [event-id f]
+  (swap! events assoc event-id {:event-fn f :event-type :fx}))
+
+(defn reg-event-db
+  [event-id f]
+  (swap! events assoc event-id {:event-fn f :event-type :db}))
+
+(defn- do-dispatch
+  [event-vec]
+  (let [event-id (first event-vec)
+        {:keys [event-fn event-type]} (event-id @events)
+        _ (when-not event-fn (throw (Exception. (str "Event not found: " event-id))))
+        effects (case event-type
+                  :db {:db (event-fn @app-db event-vec)}
+                  :fx (event-fn {:db @app-db} event-vec))]
+
+
+    ;; Do :db effect first
+
+    (when-let [db (:db effects)]
+        (reset! app-db db))
+
+
+    ;; Do other effects
+
+    (doseq [effect-id (-> effects (dissoc :db) keys)]
+      (condp = effect-id
+
+        :dispatch
+        (do-dispatch (:dispatch effects))
+
+        :dispatch-later
+        (let [{:keys [ms dispatch]} (:dispatch-later effects)]
+          (da/Future.delayed (Duration :milliseconds ms)
+                             #(do-dispatch dispatch)))
+
+        :fx
+        (doseq [[effect-id effect] (:fx effects)]
+          (if (#{:dispatch :dispatch-later} effect-id)
+            (do-dispatch effect)
+            (execute! effect-id effect)))
+
+        :deregister-event-handler
+        (swap! events dissoc (:deregister-event-handler effects))
+
+        ;; User effect
+        (execute! effect-id (effect-id effects))))))
+
+(defn dispatch-sync
+  [event-vec]
+  (do-dispatch event-vec))
+
+(defn ^:async dispatch
+  [event-vec]
+  (do-dispatch event-vec))

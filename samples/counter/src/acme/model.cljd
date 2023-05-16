@@ -1,0 +1,28 @@
+(ns acme.model
+  (:require [hti.re-dash :as rd]))
+
+(defn register!
+  "Ideally these registrations should be done in the name space directly
+  as opposed to inside a function call. The problem is the dart compiler
+  removes them during the tree shaking process due to them not being directly
+  referenced anywhere else.
+
+  Perhaps there is a way to mark these as protected so they won't be removed?"
+  []
+
+  (rd/reg-event-fx
+   ::count
+   (fn [{:keys [db]} _]
+     (let [current-count ((fnil inc 0) (:current-count db))]
+       {:db (assoc db :current-count current-count)
+        ::log-count current-count})))
+
+  (rd/reg-sub
+   ::get-count
+   (fn [db _]
+     (:current-count db)))
+
+  (rd/reg-fx
+   ::log-count
+   (fn [current-count]
+     (println (str "The current-count is " current-count)))))
