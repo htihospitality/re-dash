@@ -77,7 +77,7 @@
 
         :dispatch-later
         (let [{:keys [ms dispatch]} (:dispatch-later effects)]
-          (da/Future.delayed (Duration :milliseconds ms)
+          (da/Future.delayed (Duration .milliseconds ms)
                              #(do-dispatch dispatch)))
 
         :fx
