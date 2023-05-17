@@ -26,7 +26,7 @@
           (reg-sub
             :query-id
             (fn [db [_ foo]]
-              [db foo]))
+              (get db foo)))
 
   See also: `subscribe`
   "
@@ -36,7 +36,7 @@
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
 
-  Given a `query` vector, returns a Reagent `reaction` which will, over
+  Given a `query` vector it will, over
   time, reactively deliver a stream of values. So, in FRP-ish terms,
   it returns a `Signal`.
 
@@ -117,7 +117,7 @@
 (defn reg-event-fx
   "Register the given event `handler` (function) for the given `id`. :
 
-    - `id` is typically a namespaced keyword  (but can be anything)
+    - `id` is typically a namespaced keyword
     - `handler` is a function: (coeffects-map event-vector) -> effects-map
 
 
@@ -145,7 +145,7 @@
 (defn reg-event-db
   "Register the given event `handler` (function) for the given `id`:
 
-    - `id` is typically a namespaced keyword  (but can be anything)
+    - `id` is typically a namespaced keyword
     - `handler` is a function: (db event) -> db
 
   Example Usage:
