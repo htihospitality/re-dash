@@ -13,10 +13,59 @@
 (defonce ^:private subscriptions (atom {}))
 
 (defn reg-sub
+  "A call to `reg-sub` associates a `query-id` WITH one function.
+
+  The two arguments are:
+
+    - `query-id` - typically a namespaced keyword (later used in subscribe)
+    - a `computation function` which computes the value (output)
+
+  Registers a sub to receive derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
+
+          #!clj
+          (reg-sub
+            :query-id
+            (fn [db [_ foo]]
+              [db foo]))
+
+  See also: `subscribe`
+  "
   [subscription-id f]
   (swap! subscriptions assoc subscription-id f))
 
 (defn subscribe
+  "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
+
+  Given a `query` vector, returns a Reagent `reaction` which will, over
+  time, reactively deliver a stream of values. So, in FRP-ish terms,
+  it returns a `Signal`.
+
+  To obtain the current value from the Signal, it must be dereferenced via `:watch`:
+
+      #!clj
+      (f/widget
+       :watch [current-count (subscribe [::model/get-count])]
+       (m/Text (str current-count)))
+
+
+  `query` is a vector of at least one element. The first element is the
+  `query-id`, typically a namespaced keyword. The rest of the vector's
+  elements are optional, additional values which parameterise the query
+  performed.
+
+  **Example Usage**:
+
+      #!clj
+      (subscribe [:items])
+      (subscribe [:items \"blue\" :small])
+      (subscribe [:items {:colour \"blue\"  :size :small}])
+
+  Note: for any given call to `subscribe` there must have been a previous call
+  to `reg-sub`, registering the query handler (functions) associated with
+  `query-id`.
+
+  See also: `reg-sub`
+  "
   [query-vec]
   (let [subscription-id (first query-vec)]
     (if-let [subscription-fn (subscription-id @subscriptions)]
@@ -29,10 +78,32 @@
 (defonce ^:private effects (atom {}))
 
 (defn reg-fx
+  "Register the given effect `handler` for the given `id`:
+
+    - `id` is keyword, often namespaced.
+    - `handler` is a side-effecting function which takes a single argument and whose return
+      value is ignored.
+
+  To use, first, associate `:effect2` with a handler:
+
+      #!clj
+      (reg-fx
+         :effect2
+         (fn [value]
+            ... do something side-effect-y))
+
+  Then, later, if an event handler were to return this effects map:
+
+      #!clj
+      {:effect2  [1 2]}
+
+  then the `handler` `fn` we registered previously, using `reg-fx`, will be
+  called with an argument of `[1 2]`.
+  "
   [effect-id f]
   (swap! effects assoc effect-id f))
 
-(defn ^:async execute!
+(defn- ^:async execute!
   [effect-id effect]
   (let [effect-fn (effect-id @effects)]
     (when-not effect-fn (throw (Exception. (str "Effect not found: " effect-id))))
@@ -44,10 +115,57 @@
 (defonce ^:private events (atom {}))
 
 (defn reg-event-fx
+  "Register the given event `handler` (function) for the given `id`. :
+
+    - `id` is typically a namespaced keyword  (but can be anything)
+    - `handler` is a function: (coeffects-map event-vector) -> effects-map
+
+
+  Example Usage:
+
+      #!clj
+      (reg-event-fx
+        :event-id
+        (fn [cofx event]
+          {:db (assoc (:db cofx) :some-key (get event 2))}))   ;; return a map of effects
+
+
+  Or perhaps:
+
+      #!clj
+      (reg-event-fx
+        :namespaced/id           ;; <-- namespaced keywords are often used
+        (fn [{:keys [db] :as cofx} [_ arg1 arg2]] ;; destructure both arguments
+          {:db (assoc db :some-key arg1)          ;; return a map of effects
+           :fx [[:dispatch [:some-event arg2]]]}))
+  "
   [event-id f]
   (swap! events assoc event-id {:event-fn f :event-type :fx}))
 
 (defn reg-event-db
+  "Register the given event `handler` (function) for the given `id`:
+
+    - `id` is typically a namespaced keyword  (but can be anything)
+    - `handler` is a function: (db event) -> db
+
+  Example Usage:
+
+      #!clj
+      (reg-event-db
+        :token
+        (fn [db event]
+          (assoc db :some-key (get event 2)))  ;; return updated db
+
+  Or perhaps:
+
+      #!clj
+      (reg-event-db
+        :namespaced/id           ;; <-- namespaced keywords are often used
+        (fn [db [_ arg1 arg2]]   ;; <-- event vector is destructured
+          (-> db
+            (dissoc arg1)
+            (update :key + arg2))))   ;; return updated db
+  "
   [event-id f]
   (swap! events assoc event-id {:event-fn f :event-type :db}))
 
@@ -93,9 +211,44 @@
         (execute! effect-id (effect-id effects))))))
 
 (defn dispatch-sync
+  "Synchronously (immediately) process `event`. It does **not** queue
+  the event for handling later as `dispatch` does.
+
+  `event` is a vector and the first element is a keyword
+  which identifies the kind of event.
+
+  It is an error to use `dispatch-sync` within an event handler because
+  you can't immediately process an new event when one is already
+  part way through being processed.
+
+  Generally, avoid using this function, and instead, use `dispatch`.
+  Only use it in the narrow set of cases where any delay in
+  processing is a problem:
+
+    1. when initialising your app
+    2. in a unit test where immediate, synchronous processing is useful
+
+  Usage:
+
+      #!clj
+      (dispatch-sync [:sing :falsetto \"piano accordion\"])
+  "
   [event-vec]
   (do-dispatch event-vec))
 
 (defn ^:async dispatch
+  "Queue `event` for processing (handling).
+
+  `event` is a vector and the first element is a keyword
+  which identifies the kind of event.
+
+  Event handling does not happen immediately. It will happen 'very soon'
+  but not now.
+
+  Usage:
+
+      #!clj
+      (dispatch [:order \"pizza\" {:supreme 2 :meatlovers 1 :veg 1}])
+  "
   [event-vec]
   (do-dispatch event-vec))

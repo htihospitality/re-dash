@@ -23,16 +23,26 @@ To gain an understanding of the concepts in re-dash, head over to the excellent 
 
 ## Configuration
 
+[![Clojars Project](https://img.shields.io/clojars/v/net.clojars.htihospitality/re-dash.svg)]
+
 Follow the [ClojureDart Quickstart](https://github.com/Tensegritics/ClojureDart/blob/main/doc/flutter-quick-start.md) guide to get your app up and running
 
 Then, add the `re-dash` dependency
 
 ### deps.edn
 
+#### from clojars
+
+```edn
+:deps {net.clojars.htihospitality/re-dash {:mvn/version "0.0.2"}}
+```
+
+#### from a commit
+
 ```edn
 :deps {hti/re-dash
        {:git/url "https://github.com/htihospitality/re-dash.git"
-        :sha "5c9a01ee2fc780ffdee2a0de043e66e69f76b05f"}}
+        :sha "find the latest sha on github"}}
 ```
 
 ## Quickstart
