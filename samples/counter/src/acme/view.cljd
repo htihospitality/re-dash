@@ -15,16 +15,3 @@
      .icon (m/Icon (m/Icons.add_circle_outline))
      .onPressed #(rd/dispatch [::model/count]))
     (m/Text "Click me to count!")]))
-
-
-(def counter
-  (f/widget
-   :watch [current-count (atom 0)]
-   (m/Column
-    .mainAxisAlignment m/MainAxisAlignment.center
-    .children
-    [(m/Text (str current-count))
-     (m/IconButton
-      .icon (m/Icon (m/Icons.add_circle_outline))
-      .onPressed #(swap! current-count inc))
-     (m/Text "Click me to count!")])))
