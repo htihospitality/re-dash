@@ -2,7 +2,7 @@
 
 # re-dash
 
-A ClojureDart framework, inspired by re-frame, for building user interfaces with Flutter
+A [ClojureDart](https://github.com/Tensegritics/ClojureDart) framework, inspired by re-frame, for building user interfaces with Flutter
 
 ## Goals
 
@@ -23,14 +23,16 @@ To gain an understanding of the concepts in re-dash, head over to the excellent 
 
 ## Configuration
 
-Add the `re-dash` dependency
+Follow the [ClojureDart Quickstart](https://github.com/Tensegritics/ClojureDart/blob/main/doc/flutter-quick-start.md) guide to get your app up and running
+
+Then, add the `re-dash` dependency
 
 ### deps.edn
 
-```
+```edn
 :deps {hti/re-dash
        {:git/url "https://github.com/htihospitality/re-dash.git"
-        :sha "7d6d2f02818d1e66f6caa0a038db49161127ee39"}}
+        :sha "5623a80aa153ba9eae94c472f02cc862208a2037"}}
 ```
 
 ## Quickstart
@@ -41,7 +43,7 @@ The full working example is available under `samples/counter`
 
 ### 1st Domino - Event Dispatch
 
-```
+```clojure
 (ns acme.view
   (:require ["package:flutter/material.dart" :as m]
             [acme.model :as model]
@@ -61,7 +63,7 @@ The full working example is available under `samples/counter`
 
 Both `reg-event-db` and `reg-event-fx` are supported
 
-```
+```clojure
 (ns acme.model
   (:require [hti.re-dash :as rd]))
 
@@ -82,7 +84,7 @@ Both `reg-event-db` and `reg-event-fx` are supported
 ### 3rd Domino - Effect Handling
 
 
-```
+```clojure
 (ns acme.model
   (:require [hti.re-dash :as rd]))
 
@@ -106,7 +108,7 @@ Tip: Need to fetch some data? Do it here then dispatch a new event passing the r
 
 Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
 
-```
+```clojure
 (ns acme.view
   (:require ["package:flutter/material.dart" :as m]
             [acme.model :as model]
@@ -126,7 +128,7 @@ Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsh
 Pure. No reference to global state.
 
 
-```
+```clojure
 (ns acme.view
   (:require ["package:flutter/material.dart" :as m]
             [cljd.flutter :as f]
@@ -150,7 +152,7 @@ Pure. No reference to global state.
 
 Note, this is a contrived example to illustrate usage of this library. Best practice for when state remains local to the widget (for example key presses in a text field) should be handled in a local atom for example:
 
-```
+```clojure
 (ns acme.view
   (:require ["package:flutter/material.dart" :as m]
             [cljd.flutter :as f]
@@ -175,6 +177,54 @@ Note, this is a contrived example to illustrate usage of this library. Best prac
 Done.
 
 [More info](http://day8.github.io/re-frame/a-loop/#domino-6-dom)
+
+## Registering events, effects & subscriptions
+
+Unfortunately, due to the Dart compiler's tree shaking of `unused` code, it incorrectly removes events, effects & subscriptions if declared at the root of a ClojureDart name space. To work around this, we need to wrap all the registrations inside a function callable from `main` so the Dart compiler sees there is a reference to the code
+
+```clojure
+(ns acme.main
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.view :as view]
+            [acme.model :as model]))
+
+(defn main []
+  (model/register!)                     ;; <== This
+  (f/run
+    (m/MaterialApp
+     .title "Welcome to Flutter"
+     .theme (m/ThemeData .primarySwatch m.Colors/blue))
+    .home
+    (m/Scaffold
+     .appBar (m/AppBar
+              .title (m/Text "ClojureDart with a splash of re-dash")))
+    .body
+    m/Center
+    view/counter))
+```
+
+and in the model
+
+```clojure
+(ns acme.model
+  (:require [hti.re-dash :as rd]))
+
+(defn register!                         ;; <== This
+  []
+
+  (rd/reg-sub
+   ::get-count
+   (fn [db _]
+     (:current-count db)))
+
+  (rd/reg-fx
+   ::log-count
+   (fn [current-count]
+     (println (str "The current-count is " current-count)))))
+```
+
+This does come with a drawback, as whenever we make a change in the `model` name space, _hot reload_ does not pick up the changes, so a _hot restart_ is needed instead. Note this only affect our `model` name space, _hot reload_ works fine in our _view_. Maybe there is a way to keep our event registrations from being tree shaken, if so, we'd love to hear it!
 
 ## Issues and features
 
