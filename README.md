@@ -23,7 +23,7 @@ To gain an understanding of the concepts in re-dash, head over to the excellent 
 
 ## Configuration
 
-[![Clojars Project](https://img.shields.io/clojars/v/net.clojars.htihospitality/re-dash.svg)]
+![Clojars Project](https://img.shields.io/clojars/v/net.clojars.htihospitality/re-dash.svg)
 
 Follow the [ClojureDart Quickstart](https://github.com/Tensegritics/ClojureDart/blob/main/doc/flutter-quick-start.md) guide to get your app up and running
 
