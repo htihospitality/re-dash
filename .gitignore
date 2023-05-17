@@ -27,3 +27,9 @@
 /classes
 /target
 /.clj-kondo/
+/samples/counter/.clojuredart/
+/samples/counter/analysis_options.yaml
+/samples/counter/lib/cljd-out/
+/samples/counter/linux/
+/samples/counter/pubspec.lock
+/samples/counter/test/
