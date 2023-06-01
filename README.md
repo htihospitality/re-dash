@@ -47,7 +47,7 @@ Then, add the `re-dash` dependency
 ## Samples
 
 - `samples/counter` shows an example of an incrementing counter when clicked
-- `samples/fetch` shows an example of data fetching from an external api, using effects
+- `samples/fetch` shows an example of data fetching from an http endpoint, using effects
 
 ## Quickstart
 
