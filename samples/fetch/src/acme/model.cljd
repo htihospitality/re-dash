@@ -1,0 +1,39 @@
+(ns acme.model
+  (:require ["package:http/http.dart" :as http]
+            [hti.re-dash :as rd]))
+
+(def albums-url (Uri/parse "https://jsonplaceholder.typicode.com/albums/1"))
+
+(defn register!
+  "Registers the handlers for the 6 dominoes:
+
+  1) dispatch event ::refresh-albums from the view
+  2) handle event ::refresh-albums by returning an effect called ::fetch-albums
+     (and optionally a :db effect containing other app-state like an in-flight flag for example)
+  3) the ::fetch-albums effect handler does the fetch then dispatches ::populate-albums event containing the result
+  4) the view queries the ::get-albums subscription for its derived data
+  5) the view's widget tree gets rebuilt
+  6) the view renders"
+  []
+
+  (rd/reg-event-fx
+    ::refresh-albums
+    (fn [_ _]
+      {::fetch-albums nil}))
+
+  (rd/reg-fx
+    ::fetch-albums
+    (fn [_]
+      (let [result (-> (await (http/get albums-url))
+                       (.-body))]
+        (rd/dispatch [::populate-albums result]))))
+
+  (rd/reg-event-db
+    ::populate-albums
+    (fn [db [_ albums]]
+      (assoc db :albums albums)))
+
+  (rd/reg-sub
+    ::get-albums
+    (fn [db _]
+      (:albums db ""))))

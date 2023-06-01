@@ -4,10 +4,12 @@
 
 A [ClojureDart](https://github.com/Tensegritics/ClojureDart) framework, inspired by re-frame, for building user interfaces with Flutter
 
-## Goals
+## Features
 
 * Global central state management
 * Pure views with no direct reference to global state
+* Interact with global state via events & subscriptions
+* Handle side effects at the edge with effect handlers
 * Familiar api if coming from re-frame
 
 ## Documentation
@@ -17,11 +19,6 @@ A [ClojureDart](https://github.com/Tensegritics/ClojureDart) framework, inspired
 Many (not all) of the concepts in [re-frame](http://day8.github.io/re-frame/re-frame/) has been made available in this library, and the aim is to share the same api as far as possible, so if you're familiar with re-frame, picking up re-dash should feel natural.
 
 To gain an understanding of the concepts in re-dash, head over to the excellent documentation in [re-frame](http://day8.github.io/re-frame/re-frame/)
-
-## Not (yet) supported
-
-* [Coeffects](https://github.com/day8/re-frame/blob/master/docs/Coeffects.md)
-* [Interceptors](https://github.com/day8/re-frame/blob/master/docs/Interceptors.md)
 
 ## Configuration
 
@@ -46,6 +43,11 @@ Then, add the `re-dash` dependency
        {:git/url "https://github.com/htihospitality/re-dash.git"
         :sha "find the latest sha on github"}}
 ```
+
+## Samples
+
+- `samples/counter` shows an example of an incrementing counter when clicked
+- `samples/fetch` shows an example of data fetching from an external api, using effects
 
 ## Quickstart
 
@@ -237,6 +239,11 @@ and in the model
 ```
 
 This does come with a drawback, as whenever we make a change in the `model` name space, _hot reload_ does not pick up the changes, so a _hot restart_ is needed instead. Note this only affect our `model` name space, _hot reload_ works fine in our _view_. Maybe there is a way to keep our event registrations from being tree shaken, if so, we'd love to hear it!
+
+## Not (yet) supported
+
+* [Coeffects](https://github.com/day8/re-frame/blob/master/docs/Coeffects.md)
+* [Interceptors](https://github.com/day8/re-frame/blob/master/docs/Interceptors.md)
 
 ## Issues and features
 

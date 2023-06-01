@@ -5,7 +5,9 @@
             [acme.model :as model]))
 
 (defn main []
+
   (model/register!)
+
   (f/run
     (m/MaterialApp
      .title "Welcome to Flutter"

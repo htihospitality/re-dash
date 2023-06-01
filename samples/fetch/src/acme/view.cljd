@@ -1,0 +1,17 @@
+(ns acme.view
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.model :as model]
+            [hti.re-dash :as rd]))
+
+(def albums
+  (m/Column
+    .mainAxisAlignment m/MainAxisAlignment.center
+    .children
+    [(m/Text "Albums:")
+     (f/widget
+       :watch [albums (rd/subscribe [::model/get-albums])]
+       (m/Text albums))
+     (m/ElevatedButton
+       .child (m/Text "Refresh")
+       .onPressed #(rd/dispatch [::model/refresh-albums]))]))
