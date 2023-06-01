@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.1.1 - 2023-06-01
+### Changes
+- Fixed issue causing async http calls not updating app-db
+
 ## 0.1.0 - 2023-05-17
 ### Changes
 - Initial clojars release
