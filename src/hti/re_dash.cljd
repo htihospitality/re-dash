@@ -175,9 +175,8 @@
         {:keys [event-fn event-type]} (event-id @events)
         _ (when-not event-fn (throw (Exception. (str "Event not found: " event-id))))
         effects (case event-type
-                  :db {:db (event-fn @app-db event-vec)}
-                  :fx (event-fn {:db @app-db} event-vec))]
-
+                  :db {:db (await (event-fn @app-db event-vec))}
+                  :fx (await (event-fn {:db @app-db} event-vec)))]
 
     ;; Do :db effect first
 
