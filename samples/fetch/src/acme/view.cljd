@@ -5,13 +5,17 @@
             [hti.re-dash :as rd]))
 
 (def albums
-  (m/Column
-    .mainAxisAlignment m/MainAxisAlignment.center
-    .children
-    [(m/Text "Albums:")
-     (f/widget
-       :watch [albums (rd/subscribe [::model/get-albums])]
-       (m/Text albums))
-     (m/ElevatedButton
-       .child (m/Text "Refresh")
-       .onPressed #(rd/dispatch [::model/refresh-albums]))]))
+  (f/widget
+    :watch [albums (rd/subscribe [::model/get-albums])
+            request-in-flight? (rd/subscribe [::model/get-request-in-flight])]
+    (m/Column
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .children
+      [(m/Visibility
+         .visible request-in-flight?
+         .child (m/CircularProgressIndicator))
+       (m/Text "Albums:")
+       (m/Text albums)
+       (m/ElevatedButton
+         .child (m/Text "Refresh")
+         .onPressed #(rd/dispatch [::model/refresh-albums]))])))

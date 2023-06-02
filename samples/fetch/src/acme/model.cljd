@@ -18,8 +18,9 @@
 
   (rd/reg-event-fx
     ::refresh-albums
-    (fn [_ _]
-      {::fetch-albums nil}))
+    (fn [{:keys [db]} _]
+      {::fetch-albums nil
+       :db (assoc db :request-in-flight true)}))
 
   (rd/reg-fx
     ::fetch-albums
@@ -31,9 +32,16 @@
   (rd/reg-event-db
     ::populate-albums
     (fn [db [_ albums]]
-      (assoc db :albums albums)))
+      (assoc db
+             :albums albums
+             :request-in-flight false)))
 
   (rd/reg-sub
     ::get-albums
     (fn [db _]
-      (:albums db ""))))
+      (:albums db "")))
+
+  (rd/reg-sub
+    ::get-request-in-flight
+    (fn [db _]
+      (:request-in-flight db false))))
