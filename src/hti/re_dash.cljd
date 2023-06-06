@@ -30,8 +30,11 @@
 
   See also: `subscribe`
   "
-  [subscription-id f]
-  (swap! subscriptions assoc subscription-id f))
+  ([subscription-id extractor-fn]
+   (swap! subscriptions assoc subscription-id {:extractor-fn extractor-fn}))
+  ([subscription-id signal-fn computation-fn]
+   (swap! subscriptions assoc subscription-id {:signal-fn signal-fn
+                                               :computation-fn computation-fn})))
 
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
@@ -68,8 +71,14 @@
   "
   [query-vec]
   (let [subscription-id (first query-vec)]
-    (if-let [subscription-fn (subscription-id @subscriptions)]
-      (f/$ (subscription-fn (f/<! app-db) query-vec))
+    (if-let [{:keys [extractor-fn signal-fn computation-fn]} (subscription-id @subscriptions)]
+      (if extractor-fn
+
+        ;; extract derived value from app-db
+        (f/$ (extractor-fn (f/<! app-db) query-vec))
+
+        ;; signal from other subscriptions
+        (f/$ (computation-fn (f/<! (signal-fn query-vec)) query-vec)))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 
