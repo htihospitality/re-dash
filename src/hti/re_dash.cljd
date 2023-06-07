@@ -36,6 +36,13 @@
    (swap! subscriptions assoc subscription-id {:signal-fn signal-fn
                                                :computation-fn computation-fn})))
 
+(defn- map->signals
+  [signals]
+  (->> (map (fn [[k v]]
+              {k (f/<! v)})
+            signals)
+       (into {})))
+
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
 
@@ -78,7 +85,12 @@
         (f/$ (extractor-fn (f/<! app-db) query-vec))
 
         ;; signal from other subscriptions
-        (f/$ (computation-fn (f/<! (signal-fn query-vec)) query-vec)))
+        (f/$ (computation-fn (let [signals (signal-fn query-vec)]
+                               (cond
+                                 (vector? signals) (map #(f/<! %) signals)
+                                 (map? signals)    (map->signals signals)
+                                 :else             (f/<! signals)))
+                             query-vec)))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 
