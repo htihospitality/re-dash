@@ -24,7 +24,7 @@
         :=> (fn [db [_ & opts]] (apply f db opts))))))
 
 (defn reg-sub
-  "A call to `reg-sub` associates a `query-id` WITH one function.
+  "A call to `reg-sub` associates a `query-id` with one function.
 
   The two arguments are:
 
@@ -38,6 +38,22 @@
             :query-id
             (fn [db [_ foo]]
               (get db foo)))
+
+  It also supports the arrow syntax sugar of re-frame:
+
+          #!clj
+          ;; equivalent to (reg-sub :query-id (fn [db _] (:foo db)))
+          ;; (subscribe :query-id)
+          (reg-sub
+            :query-id
+            :-> :foo))
+
+          #!clj
+          ;; equivalent to (reg-sub :query-id (fn [db [_ & opts]] (apply get-in db opts)))
+          ;; (subscribe :query-id [:foo :bar])
+          (reg-sub
+            :query-id
+            :=> get-in)
 
   See also: `subscribe`
   "
