@@ -128,21 +128,16 @@
   "
   [query-vec]
   (let [subscription-id (first query-vec)]
-    (if-let [{:keys [extractor-fn signal-fn computation-fn]} (subscription-id @subscriptions)]
-      (if extractor-fn
-
-        ;; extract derived value from app-db
-        (f/$ (extractor-fn (f/<! app-db) query-vec))
-
-        ;; signal from other subscriptions
-        (f/$ (computation-fn (let [signals (signal-fn query-vec)]
-                               (cond
-                                 (vector? signals) (map #(f/<! %) signals)
-                                 (map? signals)    (map->signals signals)
-                                 :else             (f/<! signals)))
-                             query-vec)))
+    (if-let [{:keys [signal-fn computation-fn]}
+             (get @subscriptions subscription-id)]
+      (f/$ (computation-fn
+            (let [signals (signal-fn query-vec)]
+              (cond
+                (vector? signals) (map #(f/<! %) signals)
+                (map? signals)    (map->signals signals)
+                :else             (f/<! signals)))
+            query-vec))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
-
 
 ;; Effects
 
