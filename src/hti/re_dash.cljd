@@ -12,8 +12,19 @@
 
 (defonce ^:private subscriptions (atom {}))
 
+(defn computation-fn
+  [args]
+  (let [[op f] (take-last 2 args)]
+    (if (nil? f)
+      ;; (reg-sub ::foo (fn [_ _]))
+      op
+      ;; (reg-sub ::foo :-> :foo)
+      (case op
+        :-> (fn [db _] (f db))
+        :=> (fn [db [_ & opts]] (apply f db opts))))))
+
 (defn reg-sub
-  "A call to `reg-sub` associates a `query-id` WITH one function.
+  "A call to `reg-sub` associates a `query-id` with one function.
 
   The two arguments are:
 
@@ -28,10 +39,26 @@
             (fn [db [_ foo]]
               (get db foo)))
 
+  It also supports the arrow syntax sugar of re-frame:
+
+          #!clj
+          ;; equivalent to (reg-sub :query-id (fn [db _] (:foo db)))
+          ;; (subscribe :query-id)
+          (reg-sub
+            :query-id
+            :-> :foo))
+
+          #!clj
+          ;; equivalent to (reg-sub :query-id (fn [db [_ & opts]] (apply get-in db opts)))
+          ;; (subscribe :query-id [:foo :bar])
+          (reg-sub
+            :query-id
+            :=> get-in)
+
   See also: `subscribe`
   "
-  [subscription-id f]
-  (swap! subscriptions assoc subscription-id f))
+  [subscription-id & args]
+  (swap! subscriptions assoc subscription-id (computation-fn args)))
 
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))

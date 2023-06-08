@@ -2,6 +2,12 @@
   (:require [clojure.test :refer :all]
             [hti.re-dash :refer :all]))
 
-(deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+(deftest computation-fn-test
+  (let [db {:foo 42
+            :bar {:baz 9001}}])
+  (testing ":->"
+    (let [f (computation-fn (list :-> :foo))]
+      (is (= 42 (f db [])))))
+  (testing ":=>"
+    (let [f (computation-fn (list :=> get-in))]
+      (is (= 9001 (f db [:bar :baz]))))))
