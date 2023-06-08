@@ -12,6 +12,59 @@
 
 (defonce ^:private subscriptions (atom {}))
 
+(defn- map->signals
+  [signals]
+  (->> (map (fn [[k v]]
+              {k (f/<! v)})
+            signals)
+       (into {})))
+
+(defn subscribe
+  "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
+
+  Given a `query` vector it will, over
+  time, reactively deliver a stream of values. So, in FRP-ish terms,
+  it returns a `Signal`.
+
+  To obtain the current value from the Signal, it must be dereferenced via `:watch`:
+
+      #!clj
+      (f/widget
+       :watch [current-count (subscribe [::model/get-count])]
+       (m/Text (str current-count)))
+
+
+  `query` is a vector of at least one element. The first element is the
+  `query-id`, typically a namespaced keyword. The rest of the vector's
+  elements are optional, additional values which parameterise the query
+  performed.
+
+  **Example Usage**:
+
+      #!clj
+      (subscribe [:items])
+      (subscribe [:items \"blue\" :small])
+      (subscribe [:items {:colour \"blue\"  :size :small}])
+
+  Note: for any given call to `subscribe` there must have been a previous call
+  to `reg-sub`, registering the query handler (functions) associated with
+  `query-id`.
+
+  See also: `reg-sub`
+  "
+  [query-vec]
+  (let [subscription-id (first query-vec)]
+    (if-let [{:keys [signal-fn computation-fn]}
+             (get @subscriptions subscription-id)]
+      (f/$ (computation-fn
+            (let [signals (signal-fn query-vec)]
+              (cond
+                (vector? signals) (map #(f/<! %) signals)
+                (map? signals)    (map->signals signals)
+                :else             (f/<! signals)))
+            query-vec))
+      (throw (Exception. (str "Subscription not found: " subscription-id))))))
+
 (defn build-sub-map
   [args]
   (let [[op f]
@@ -85,59 +138,6 @@
   "
   [subscription-id & args]
   (swap! subscriptions assoc subscription-id (build-sub-map args)))
-
-(defn- map->signals
-  [signals]
-  (->> (map (fn [[k v]]
-              {k (f/<! v)})
-            signals)
-       (into {})))
-
-(defn subscribe
-  "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
-
-  Given a `query` vector it will, over
-  time, reactively deliver a stream of values. So, in FRP-ish terms,
-  it returns a `Signal`.
-
-  To obtain the current value from the Signal, it must be dereferenced via `:watch`:
-
-      #!clj
-      (f/widget
-       :watch [current-count (subscribe [::model/get-count])]
-       (m/Text (str current-count)))
-
-
-  `query` is a vector of at least one element. The first element is the
-  `query-id`, typically a namespaced keyword. The rest of the vector's
-  elements are optional, additional values which parameterise the query
-  performed.
-
-  **Example Usage**:
-
-      #!clj
-      (subscribe [:items])
-      (subscribe [:items \"blue\" :small])
-      (subscribe [:items {:colour \"blue\"  :size :small}])
-
-  Note: for any given call to `subscribe` there must have been a previous call
-  to `reg-sub`, registering the query handler (functions) associated with
-  `query-id`.
-
-  See also: `reg-sub`
-  "
-  [query-vec]
-  (let [subscription-id (first query-vec)]
-    (if-let [{:keys [signal-fn computation-fn]}
-             (get @subscriptions subscription-id)]
-      (f/$ (computation-fn
-            (let [signals (signal-fn query-vec)]
-              (cond
-                (vector? signals) (map #(f/<! %) signals)
-                (map? signals)    (map->signals signals)
-                :else             (f/<! signals)))
-            query-vec))
-      (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 ;; Effects
 
