@@ -97,6 +97,12 @@
               (if (fn? input-fn)
                 input-fn
                 (throw (Exception. (str "Expected 2nd argument to be input function, got: " input-fn)))))
+          2 (let [[sugar signal] input-args]
+              (if (and (= :<- sugar) (vector? signal))
+                (fn input-fn
+                  ([_] (subscribe signal))
+                  ([_ _] (subscribe signal)))
+                (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args)))))
           ;; else
           (let [pairs (partition 2 input-args)
                 sugars (map first pairs)
