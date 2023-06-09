@@ -2,6 +2,9 @@
 
 # re-dash
 
+[![Clojars Project](https://img.shields.io/clojars/v/net.clojars.htihospitality/re-dash.svg)](https://clojars.org/net.clojars.htihospitality/re-dash)
+![CI](https://github.com/htihospitality/re-dash/workflows/CI/badge.svg)
+
 A [ClojureDart](https://github.com/Tensegritics/ClojureDart) framework, inspired by re-frame, for building user interfaces with Flutter
 
 ## Features
