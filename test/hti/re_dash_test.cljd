@@ -1,16 +1,12 @@
 (ns hti.re-dash-test
   (:require [clojure.test :refer [deftest is testing]]
-            [hti.re-dash :refer [computation-fn]]))
+            [hti.re-dash :refer [build-sub-map]]))
 
-(deftest some-test
-  (is (= 1 1)))
-
-#_(deftest computation-fn-test
-  (let [db {:foo 42
-            :bar {:baz 9001}}]
-    (testing ":->"
-      (let [f (computation-fn (list :-> :foo))]
-        (is (= 42 (f db [])))))
-    (testing ":=>"
-      (let [f (computation-fn (list :=> get-in))]
-        (is (= 9001 (f db [:bar :baz])))))))
+(deftest build-sub-map-test
+  (binding [hti.re-dash/app-db (atom {:foo {:bar 42} :baz 9001})]
+    (testing "Two functions case"
+      ;; (reg-sub ::foo (fn [_ _]) (fn [_ _]))
+      (let [input-fn #()
+            comp-fn #()]
+        (is (= {:signal-fn input-fn :computation-fn comp-fn}
+               (build-sub-map (list input-fn comp-fn))))))))
