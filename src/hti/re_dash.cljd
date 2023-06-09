@@ -85,20 +85,27 @@
               :-> [input-args
                    (fn [signals _] (f signals))]
               :=> [input-args
-                   (fn [signals [_ & opts]] (apply f signals opts))])))
+                   (fn [signals [_ & opts]] (apply f signals opts))]
+              (throw (Exception. (str "Expected `:->` or `:=>` as second-to-last argument, got: " op))))))
 
         signal-fn
         (case (count input-args)
           0 (fn app-db-subscription
               ([_] app-db)
               ([_ _] app-db))
-          1 (first input-args)
+          1 (let [input-fn (first input-args)]
+              (if (fn? input-fn)
+                input-fn
+                (throw (Exception. (str "Expected 2nd argument to be input function, got: " input-fn)))))
           ;; else
           (let [pairs (partition 2 input-args)
+                sugars (map first pairs)
                 signals (map second pairs)]
-            (fn input-fn
-              ([_] (map subscribe vecs))
-              ([_ _] (map subscribe vecs)))))]
+            (if (and (every? #{:<-} sugars) (every? vector? signals))
+              (fn input-fn
+                ([_] (map subscribe signals))
+                ([_ _] (map subscribe signals)))
+              (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " pairs))))))]
     {:signal-fn signal-fn
      :computation-fn computation-fn}))
 
