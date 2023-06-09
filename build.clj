@@ -3,7 +3,7 @@
   (:require [org.corfield.build :as bb]))
 
 (def lib 'net.clojars.htihospitality/re-dash)
-(def version "0.1.2")
+(def version "0.1.3")
 
 (defn test "Run the tests." [opts]
   (bb/run-tests opts))

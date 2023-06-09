@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.1.3 - 2023-06-09
+### Changes
+- Revert back to cljd namespaces as cljdoc errors out
+
 ## 0.1.2 - 2023-06-09
 ### Changes
 - Renamed namespaces to cljc to test compatibility with cljdoc
