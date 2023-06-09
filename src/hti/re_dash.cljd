@@ -135,14 +135,14 @@
 
           #!clj
           ;; equivalent to (reg-sub :query-id (fn [db _] (:foo db)))
-          ;; (subscribe :query-id)
+          ;; (subscribe [:query-id])
           (reg-sub
             :query-id
             :-> :foo))
 
           #!clj
           ;; equivalent to (reg-sub :query-id (fn [db [_ & opts]] (apply get-in db opts)))
-          ;; (subscribe :query-id [:foo :bar])
+          ;; (subscribe [:query-id [[:foo :bar]]])
           (reg-sub
             :query-id
             :=> get-in)
