@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.1.2 - 2023-06-09
+### Changes
+- Renamed namespaces to cljc to test compatibility with cljdoc
+
 ## 0.1.1 - 2023-06-01
 ### Changes
 - Fixed issue causing async http calls not updating app-db
