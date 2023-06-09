@@ -11,18 +11,46 @@
   []
 
   (rd/reg-event-fx
-   ::count
-   (fn [{:keys [db]} _]
-     (let [current-count ((fnil inc 0) (:current-count db))]
-       {:db (assoc db :current-count current-count)
-        ::log-count current-count})))
+    ::count
+    (fn [{:keys [db]} _]
+      (let [current-count ((fnil inc 0) (:current-count db))]
+        {:db (assoc db :current-count current-count)
+         ::log-count current-count})))
 
   (rd/reg-sub
-   ::get-count
-   (fn [db _]
-     (:current-count db)))
+    ::get-count
+    (fn [db _]
+      (:current-count db)))
+
+  (rd/reg-sub
+    ::get-count-2
+    (fn [db _]
+      (:current-count db)))
+
+  (rd/reg-sub
+    ::get-count-vec
+    (fn [_]
+      [(rd/subscribe [::get-count])
+       (rd/subscribe [::get-count-2])])
+    (fn [[get-count get-count-2] _]
+      (str "The count is " get-count " and " get-count-2)))
+
+  (rd/reg-sub
+    ::get-count-map
+    (fn [_]
+      {:c1 (rd/subscribe [::get-count])
+       :c2 (rd/subscribe [::get-count-2])})
+    (fn [{:keys [c1 c2]} _]
+      (str "The count is " c1 " and " c2)))
+
+  (rd/reg-sub
+    ::get-count-single
+    (fn [_]
+      (rd/subscribe [::get-count]))
+    (fn [get-count _]
+      (str "The count is " get-count)))
 
   (rd/reg-fx
-   ::log-count
-   (fn [current-count]
-     (println (str "The current-count is " current-count)))))
+    ::log-count
+    (fn [current-count]
+      (println (str "The current-count is " current-count)))))

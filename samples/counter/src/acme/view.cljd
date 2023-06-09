@@ -9,7 +9,7 @@
    .mainAxisAlignment m/MainAxisAlignment.center
    .children
    [(f/widget
-     :watch [current-count (rd/subscribe [::model/get-count])]
+      :watch [current-count (rd/subscribe [::model/get-count-single])]
      (m/Text (str current-count)))
     (m/IconButton
      .icon (m/Icon (m/Icons.add_circle_outline))
