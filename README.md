@@ -23,6 +23,8 @@ Many (not all) of the concepts in [re-frame](http://day8.github.io/re-frame/re-f
 
 To gain an understanding of the concepts in re-dash, head over to the excellent documentation in [re-frame](http://day8.github.io/re-frame/re-frame/)
 
+Also see [State management in ClojureDart](https://www.etiennetheodore.com/state-management-in-clojuredart) by [Etienne Théodore](https://github.com/Kiruel) for a detailed walk-through
+
 ## Configuration
 
 [![Clojars Project](https://img.shields.io/clojars/v/net.clojars.htihospitality/re-dash.svg)](https://clojars.org/net.clojars.htihospitality/re-dash)
