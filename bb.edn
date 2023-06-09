@@ -1,0 +1,10 @@
+{:paths ["script"]
+ :deps {}
+ :tasks
+ {compile-tests {:doc "Compile tests"
+                 :task (shell (str "clj -M:cljd:test compile "
+                                   "hti.re-dash-test"))}
+
+  test {:doc "Run tests"
+        :task (shell "flutter test")
+        :depends [compile-tests]}}}
