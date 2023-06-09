@@ -33,3 +33,9 @@
 /samples/counter/linux/
 /samples/counter/pubspec.lock
 /samples/counter/test/
+/.clojuredart/
+/.dart_tool/
+/build/
+/pubspec.lock
+/test/cljd-out/
+/lib/cljd-out/

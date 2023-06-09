@@ -1,7 +1,7 @@
 {:paths ["src"]
  :deps {tensegritics/clojuredart
         {:git/url "https://github.com/tensegritics/ClojureDart.git"
-         :sha "8d5916c0dc87146dc2e8921aaa7fd5dc3c6c3401"}}
+         :sha "bb8b648a03e9caac58213d7e3dcb88940317e74b"}}
  :aliases
  {:test
   {:extra-paths ["test"]
@@ -10,4 +10,7 @@
                 {:git/tag "v0.5.1" :git/sha "dfb30dd"}}}
   :build {:deps {io.github.seancorfield/build-clj
                  {:git/tag "v0.6.4" :git/sha "c21cfde"}}
-          :ns-default build}}}
+          :ns-default build}
+  :cljd {:main-opts ["-m" "cljd.build"]}}
+ :cljd/opts {:kind :dart
+             :main hti.re-dash}}
