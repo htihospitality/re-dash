@@ -35,7 +35,7 @@ Then, add the `re-dash` dependency
 
 ### deps.edn
 
-#### from clojarsg
+#### from clojars
 
 ```edn
 :deps {net.clojars.htihospitality/re-dash {:mvn/version "0.1.3"}}
@@ -262,7 +262,7 @@ Please feel free to raise issues on Github or send pull requests
 
 ## Development
 
-This section is a guide to developing the re-dash library itself
+This section is a guide to developing this re-dash library itself
 
 ### Prerequisites
 
@@ -270,7 +270,7 @@ Clojure and Flutter installed and on your path
 
 ### Workflow
 
-Fork then clone this repository to a local folder like `~/src/re-dash`
+Fork, then clone this repository to a local folder like `~/src/re-dash`
 
 If you don't already have a ClojureDart/re-dash project you can copy one of the sample projects to start hacking:
 
