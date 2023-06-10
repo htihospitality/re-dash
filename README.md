@@ -274,7 +274,7 @@ Fork, then clone this repository to a local folder like `~/src/re-dash`
 
 If you don't already have a ClojureDart/re-dash project you can copy one of the sample projects to start hacking:
 
-```
+```bash
 cp -r ~/src/re-dash/samples/counter ~/src/counter
 ```
 
@@ -310,11 +310,11 @@ re-dash tests are run like this
 ```bash
 cd ~/src/re-dash
 
-;; first compile the test namespace
+## first compile the test namespace
 
 clj -M:cljd:test compile hti.re-dash-test
 
-;; run the tests
+## run the tests
 
 flutter test
 ```
