@@ -260,6 +260,65 @@ Please feel free to raise issues on Github or send pull requests
 * [re-frame](https://github.com/day8/re-frame) for the inspiration for this library
 * [Dash](https://docs.flutter.dev/dash) the mascot for Dart & Flutter
 
+## Development
+
+This section is a guide to developing the re-dash library itself
+
+### Prerequisites
+
+Clojure and Flutter installed and on your path
+
+### Workflow
+
+Fork then clone this repository to a local folder like `~/src/re-dash`
+
+If you don't already have a ClojureDart/re-dash project you can copy one of the sample projects to start hacking:
+
+```
+cp -r ~/src/re-dash/samples/counter ~/src/counter
+```
+
+Add the re-dash src folder and remove the re-dash dependency from `~/src/counter/deps.edn`
+
+```clojure
+{:paths ["src" "../re-dash/src"]
+ :deps {tensegritics/clojuredart
+        {:git/url "https://github.com/tensegritics/ClojureDart.git"
+         :sha "some sha"}}
+ :aliases {:cljd {:main-opts ["-m" "cljd.build"]}}
+ :cljd/opts {:kind :flutter
+             :main acme.main}}
+```
+
+
+Create the platform folders and run the counter app
+
+```bash
+cd ~/src/counter
+
+flutter create .
+
+clj -M:cljd flutter -d linux  ;; or whichever device you want to run on
+```
+
+Now any changes you make in the re-dash source code will be picked up in the running counter app when doing a hot restart with 'R' in the terminal
+
+### Tests
+
+re-dash tests are run like this
+
+```bash
+cd ~/src/re-dash
+
+;; first compile the test namespace
+
+clj -M:cljd:test compile hti.re-dash-test
+
+;; run the tests
+
+flutter test
+```
+
 ## License
 
 [MIT License](https://github.com/htihospitality/re-dash/blob/main/LICENSE)
