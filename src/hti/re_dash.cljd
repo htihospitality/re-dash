@@ -66,7 +66,7 @@
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 (defn build-sub-map
-  [args]
+  [sub-fn args]
   (let [[op f]
         (take-last 2 args)
 
@@ -100,8 +100,8 @@
           2 (let [[sugar signal] input-args]
               (if (and (= :<- sugar) (vector? signal))
                 (fn input-fn
-                  ([_] (subscribe signal))
-                  ([_ _] (subscribe signal)))
+                  ([_] (sub-fn signal))
+                  ([_ _] (sub-fn signal)))
                 (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args)))))
           ;; else
           (let [pairs (partition 2 input-args)
@@ -109,8 +109,8 @@
                 signals (map second pairs)]
             (if (and (every? #{:<-} sugars) (every? vector? signals))
               (fn input-fn
-                ([_] (map subscribe signals))
-                ([_ _] (map subscribe signals)))
+                ([_] (map sub-fn signals))
+                ([_ _] (map sub-fn signals)))
               (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args))))))]
     {:signal-fn signal-fn
      :computation-fn computation-fn}))
@@ -150,7 +150,7 @@
   See also: `subscribe`
   "
   [subscription-id & args]
-  (swap! subscriptions assoc subscription-id (build-sub-map args)))
+  (swap! subscriptions assoc subscription-id (build-sub-map subscribe args)))
 
 ;; Effects
 

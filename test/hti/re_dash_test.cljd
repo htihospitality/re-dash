@@ -21,27 +21,45 @@
 (use-fixtures :once reset-app-db reset-subscriptions)
 ; (use-fictures :each reset-app-db reset-subscriptions)
 
+(defn dummy-subscribe
+  [[sub-id :as query-vec]]
+  (if-let [{:keys [signal-fn computation-fn]}
+           (get @hti.re-dash/subscriptions sub-id)]
+    (atom (computation-fn
+           (let [signals (signal-fn query-vec)]
+             (cond
+               (vector? signals) (map deref signals)
+               (map? signals)    (reduce-kv
+                                  (fn [aggr k v] (assoc aggr k (deref v)))
+                                  {}
+                                  signals)
+               :else             (deref signals)))
+           query-vec))
+    (throw (Exception. (str "Missing dummy sub: " sub-id)))))
+
 (deftest build-sub-map-test
   (testing "Explicit input function"
-    ;; TODO use <! instead of deref and that should endure (fn ([_]) ([_ _]))
-    (let [input-fn (constantly (atom nil))]
+    (let [dummy-state (atom nil)
+          input-fn (fn dummy-input ([] dummy-state) ([_] dummy-state))]
       (testing "Just computation function"
         ;; (reg-sub ::foo (fn [_ _]) (fn [_ _]))
         (let [comp-fn #()]
           (is (= {:signal-fn input-fn :computation-fn comp-fn}
-                 (build-sub-map (list input-fn comp-fn))))))
+                 (build-sub-map dummy-subscribe (list input-fn comp-fn))))))
       (testing ":-> sugar"
         ;; (reg-sub ::foo (fn [_ _]) :-> :baz)
         (let [coords [::foo]
               {:keys [signal-fn computation-fn]}
-              (build-sub-map (list input-fn :-> nil?))]
+              (build-sub-map dummy-subscribe (list input-fn :-> nil?))]
           (is (= input-fn signal-fn))
           (is (= true (computation-fn @(signal-fn coords) coords)))))
       (testing ":=> sugar"
         ;; (reg-sub ::foo (fn [_ _]) :=> (fn [a b] (or a b)))
         (let [coords [::foo 42]
               {:keys [signal-fn computation-fn]}
-              (build-sub-map (list input-fn :=> (fn [a b] (or a (* 2 b)))))]
+              (build-sub-map
+               dummy-subscribe
+               (list input-fn :=> (fn [a b] (or a (* 2 b)))))]
           (is (= input-fn signal-fn))
           (is (= 84 (computation-fn @(signal-fn coords) coords)))))))
   (testing "No input function"
@@ -49,8 +67,7 @@
       ;; (reg-sub ::foo (fn [_ _]))
       (let [comp-fn #()
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list comp-fn))]
-        ;; TODO use <! like in subscribe
+            (build-sub-map dummy-subscribe (list comp-fn))]
         (is (= 9001 (:baz @(signal-fn [])))
             "The signal becomes the default app-db")
         (is (= comp-fn computation-fn))))
@@ -58,15 +75,15 @@
       ;; (reg-sub ::foo :-> :baz)
       (let [coords [::foo]
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list :-> :baz))]
-        ;; TODO use <! like in subscribe
+            (build-sub-map dummy-subscribe (list :-> :baz))]
         (is (= 9001 (computation-fn @(signal-fn coords) coords)))))
     (testing ":=> sugar"
       ;; (reg-sub ::foo :=> get-in)
       (let [coords [::foo :foo :baz]
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list :=> (fn [db a b] {(b db) (a db)})))]
-        ;; TODO use <! like in subscribe
+            (build-sub-map
+             dummy-subscribe
+             (list :=> (fn [db a b] {(b db) (a db)})))]
         (is (= {9001 {:bar 42}} (computation-fn @(signal-fn coords) coords))))))
   (testing "One sugar input pair"
     (testing "Computation function"
@@ -74,61 +91,57 @@
       (let [coords [::foo]
             comp-fn (fn [n _] n)
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list :<- [::hoge] comp-fn))]
-        ;; TODO somehow deref Cell to check value
-        (is (instance? f/Cell (signal-fn coords)))
+            (build-sub-map dummy-subscribe (list :<- [::hoge] comp-fn))]
+        (is (= 42 @(signal-fn coords)))
         (is (= comp-fn computation-fn))))
     (testing ":-> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :-> (fn [n _] (* 2 n)))
       (let [coords [::foo 2]
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list :<- [::hoge] :-> (fn [n] (* 2 n))))]
+            (build-sub-map
+             dummy-subscribe
+             (list :<- [::hoge] :-> (fn [n] (* 2 n))))]
         ;; TODO somehow deref Cell to check value
-        (is (instance? f/Cell (signal-fn coords)))
-        ;; TODO use <! like in subscribe
-        (is (= 84 (computation-fn 42 coords))
+        (is (= 42 @(signal-fn coords)))
+        (is (= 84 (computation-fn @(signal-fn coords) coords))
             "the subscription params are ignored with :->")))
     (testing ":=> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :=> (fn [db a b] [db a b]))
       (let [coords [::foo :hoge :fuga]
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list :<- [::hoge] :=> (fn [db a b] [db a b])))]
-        ;; TODO somehow deref Cell to check value
-        (is (instance? f/Cell (signal-fn coords)))
-        ;; TODO use <! like in subscribe
-        (is (= [42 :hoge :fuga] (computation-fn 42 coords))))))
+            (build-sub-map
+             dummy-subscribe
+             (list :<- [::hoge] :=> (fn [db a b] [db a b])))]
+        (is (= 42 @(signal-fn coords)))
+        (is (= [42 :hoge :fuga] (computation-fn @(signal-fn coords) coords))))))
   (testing "Multiple sugar pairs"
     (testing "Computation function"
       ;; (reg-sub ::foo :<- [::hoge] :<- [::fuga] (fn [n _] n))
       (let [coords [::foo]
             comp-fn (fn [inputs _] inputs)
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list :<- [::hoge] :<- [::fuga] comp-fn))]
-        ;; TODO somehow deref Cells to check value
-        (is (seq? (signal-fn coords)))
-        (is (= 2 (count (signal-fn coords))))
-        (is (every? #(dart/is? % f/Cell) (signal-fn coords)))
+            (build-sub-map
+             dummy-subscribe
+             (list :<- [::hoge] :<- [::fuga] comp-fn))]
+        (is (= (list 42 9001) (map deref (signal-fn coords))))
         (is (= comp-fn computation-fn))))
     (testing ":-> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :<- [::fuga] :-> (fn [n] (* 2 n)))
       (let [coords [::foo 2]
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list :<- [::hoge] :<- [::fuga] :-> (fn [[n _]] (* 2 n))))]
-        ;; TODO somehow deref Cells to check value
-        (is (seq? (signal-fn coords)))
-        (is (= 2 (count (signal-fn coords))))
-        (is (every? #(dart/is? % f/Cell) (signal-fn coords)))
-        ;; TODO use <! like in subscribe
-        (is (= 84 (computation-fn (list 42 9001) coords))
+            (build-sub-map
+             dummy-subscribe
+             (list :<- [::hoge] :<- [::fuga] :-> (fn [[n _]] (* 2 n))))]
+        (is (= (list 42 9001) (map deref (signal-fn coords))))
+        (is (= 84 (computation-fn (map deref (signal-fn coords)) coords))
             "the subscription params are ignored with :->")))
     (testing ":=> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :<- [::fuga] :=> (fn [[_ x] a b] [x a b]))
       (let [coords [::foo :hoge :fuga]
             {:keys [signal-fn computation-fn]}
-            (build-sub-map (list :<- [::hoge] :<- [::fuga] :=> (fn [[_ x] a b] [x a b])))]
-        ;; TODO somehow deref Cells to check value
-        (is (seq? (signal-fn coords)))
-        (is (= 2 (count (signal-fn coords))))
-        (is (every? #(dart/is? % f/Cell) (signal-fn coords)))
-        ;; TODO use <! like in subscribe
-        (is (= [9001 :hoge :fuga] (computation-fn (list 42 9001) coords)))))))
+            (build-sub-map
+             dummy-subscribe
+             (list :<- [::hoge] :<- [::fuga] :=> (fn [[_ x] a b] [x a b])))]
+        (is (= (list 42 9001) (map deref (signal-fn coords))))
+        (is (= [9001 :hoge :fuga]
+               (computation-fn (map deref (signal-fn coords)) coords)))))))
