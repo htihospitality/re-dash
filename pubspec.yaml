@@ -1,12 +1,10 @@
 name: re_dash
-description: A sample command-line application.
+description: A ClojureDart framework for building user interfaces, leveraging Flutter
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
 
 environment:
   sdk: ^3.0.1
 
-# Add regular dependencies here.
 dependencies:
   flutter:
     sdk: flutter

@@ -2,7 +2,7 @@
  :deps {tensegritics/clojuredart
         {:git/url "https://github.com/tensegritics/ClojureDart.git"
          :sha "b3a3399f3a0425a97ef9d6c5a5f31aeee2ee3feb"}
-        net.clojars.htihospitality/re-dash {:mvn/version "0.1.1"}}
+        net.clojars.htihospitality/re-dash {:mvn/version "0.1.3"}}
  :aliases {:cljd {:main-opts ["-m" "cljd.build"]}}
  :cljd/opts {:kind :flutter
              :main acme.main}}
