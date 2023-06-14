@@ -46,6 +46,11 @@
         (let [comp-fn #()]
           (is (= {:signal-fn input-fn :computation-fn comp-fn}
                  (build-sub-map dummy-subscribe (list input-fn comp-fn))))))
+      (testing "Bad input"
+        (is (thrown? Exception
+                     (build-sub-map dummy-subscribe
+                                    (list 42 (fn [_ _]))))
+            "Raises if input function is not a function"))
       (testing ":-> sugar"
         ;; (reg-sub ::foo (fn [_ _]) :-> :baz)
         (let [coords [::foo]
@@ -61,7 +66,14 @@
                dummy-subscribe
                (list input-fn :=> (fn [a b] (or a (* 2 b)))))]
           (is (= input-fn signal-fn))
-          (is (= 84 (computation-fn @(signal-fn coords) coords)))))))
+          (is (= 84 (computation-fn @(signal-fn coords) coords)))))
+      (testing "Bad sugar"
+        ;; (reg-sub ::foo (fn [_ _]) :/> (fn [_ _]))
+        (is (thrown? Exception
+                     (build-sub-map
+                      dummy-subscribe
+                      (list input-fn :invalid> (fn [_ _]))))
+            "Raises on unknown syntax sugar"))))
   (testing "No input function"
     (testing "Just computation function"
       ;; (reg-sub ::foo (fn [_ _]))
@@ -84,7 +96,14 @@
             (build-sub-map
              dummy-subscribe
              (list :=> (fn [db a b] {(b db) (a db)})))]
-        (is (= {9001 {:bar 42}} (computation-fn @(signal-fn coords) coords))))))
+        (is (= {9001 {:bar 42}} (computation-fn @(signal-fn coords) coords)))))
+    (testing "Bad sugar"
+      ;; (reg-sub ::foo :/> (fn [_ _]))
+      (is (thrown? Exception
+                   (build-sub-map
+                    dummy-subscribe
+                    (list :invalid> (fn [_ _]))))
+          "Raises on unknown syntax sugar")))
   (testing "One sugar input pair"
     (testing "Computation function"
       ;; (reg-sub ::foo :<- [::hoge] (fn [n _] n))
@@ -94,6 +113,18 @@
             (build-sub-map dummy-subscribe (list :<- [::hoge] comp-fn))]
         (is (= 42 @(signal-fn coords)))
         (is (= comp-fn computation-fn))))
+    (testing "Bad input sugar"
+      (is (thrown? Exception
+                   (build-sub-map
+                    dummy-subscribe
+                    (list :<invalid [::hoge] (fn [_ _]))))
+          "Raises on unknown syntax sugar"))
+    (testing "Missing subscription"
+      (let [coords [::foo]
+            {:keys [computation-fn signal-fn]}
+            (build-sub-map dummy-subscribe (list :<- [::piyo] (fn [_ _])))]
+        (is (thrown? Exception (computation-fn @(signal-fn coords) coords))
+            "If the subscription used as input isn't registered, raises when subscribed to")))
     (testing ":-> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :-> (fn [n _] (* 2 n)))
       (let [coords [::foo 2]
@@ -113,7 +144,13 @@
              dummy-subscribe
              (list :<- [::hoge] :=> (fn [db a b] [db a b])))]
         (is (= 42 @(signal-fn coords)))
-        (is (= [42 :hoge :fuga] (computation-fn @(signal-fn coords) coords))))))
+        (is (= [42 :hoge :fuga] (computation-fn @(signal-fn coords) coords)))))
+    (testing "Bad output sugar"
+      (is (thrown? Exception
+                   (build-sub-map
+                    dummy-subscribe
+                    (list :<- [::hoge] :invalid> (fn [_ _]))))
+          "Raises on unknown syntax sugar")))
   (testing "Multiple sugar pairs"
     (testing "Computation function"
       ;; (reg-sub ::foo :<- [::hoge] :<- [::fuga] (fn [n _] n))
@@ -125,6 +162,41 @@
              (list :<- [::hoge] :<- [::fuga] comp-fn))]
         (is (= (list 42 9001) (map deref (signal-fn coords))))
         (is (= comp-fn computation-fn))))
+    (testing "Bad input sugar"
+      (is (thrown? Exception
+                   (build-sub-map
+                    dummy-subscribe
+                    (list :<- [::hoge] :<invalid [::fuga] (fn [_ _]))))
+          "Raises on unknown syntax sugar")
+      (is (thrown? Exception
+                   (build-sub-map
+                    dummy-subscribe
+                    (list :<invalid [::hoge] :<- [::fuga] (fn [_ _]))))
+          "Raises on unknown syntax sugar")
+      (is (thrown? Exception
+                   (build-sub-map
+                    dummy-subscribe
+                    (list :<invalid [::hoge] :<invalid [::fuga] (fn [_ _]))))
+          "Raises on unknown syntax sugar"))
+    (testing "Missing subscription"
+      (let [coords [::foo]
+            {:keys [computation-fn signal-fn]}
+            (build-sub-map dummy-subscribe
+                           (list :<- [::piyo] :<- [::hoge] (fn [_ _])))]
+        (is (thrown? Exception (computation-fn @(signal-fn coords) coords))
+            "If the subscription used as input isn't registered, raises when subscribed to"))
+      (let [coords [::foo]
+            {:keys [computation-fn signal-fn]}
+            (build-sub-map dummy-subscribe
+                           (list :<- [::hoge] :<- [::piyo] (fn [_ _])))]
+        (is (thrown? Exception (computation-fn @(signal-fn coords) coords))
+            "If the subscription used as input isn't registered, raises when subscribed to"))
+      (let [coords [::foo]
+            {:keys [computation-fn signal-fn]}
+            (build-sub-map dummy-subscribe
+                           (list :<- [::piyo] :<- [::puyo] (fn [_ _])))]
+        (is (thrown? Exception (computation-fn @(signal-fn coords) coords))
+            "If the subscription used as input isn't registered, raises when subscribed to")))
     (testing ":-> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :<- [::fuga] :-> (fn [n] (* 2 n)))
       (let [coords [::foo 2]
@@ -144,4 +216,10 @@
              (list :<- [::hoge] :<- [::fuga] :=> (fn [[_ x] a b] [x a b])))]
         (is (= (list 42 9001) (map deref (signal-fn coords))))
         (is (= [9001 :hoge :fuga]
-               (computation-fn (map deref (signal-fn coords)) coords)))))))
+               (computation-fn (map deref (signal-fn coords)) coords)))))
+    (testing "Bad output sugar"
+      (is (thrown? Exception
+                   (build-sub-map
+                    dummy-subscribe
+                    (list :<- [::hoge] :<- [::fuga] :invalid> (fn [_ _]))))
+          "Raises on unknown syntax sugar"))))
