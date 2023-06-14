@@ -12,53 +12,12 @@
 
 (defonce ^:private subscriptions (atom {}))
 
-(defn computation-fn
-  [args]
-  (let [[op f] (take-last 2 args)]
-    (if (nil? f)
-      ;; (reg-sub ::foo (fn [_ _]))
-      op
-      ;; (reg-sub ::foo :-> :foo)
-      (case op
-        :-> (fn [db _] (f db))
-        :=> (fn [db [_ & opts]] (apply f db opts))))))
-
-(defn reg-sub
-  "A call to `reg-sub` associates a `query-id` with one function.
-
-  The two arguments are:
-
-    - `query-id` - typically a namespaced keyword (later used in subscribe)
-    - a `computation function` which computes the value (output)
-
-  Registers a sub to receive derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
-
-          #!clj
-          (reg-sub
-            :query-id
-            (fn [db [_ foo]]
-              (get db foo)))
-
-  It also supports the arrow syntax sugar of re-frame:
-
-          #!clj
-          ;; equivalent to (reg-sub :query-id (fn [db _] (:foo db)))
-          ;; (subscribe :query-id)
-          (reg-sub
-            :query-id
-            :-> :foo))
-
-          #!clj
-          ;; equivalent to (reg-sub :query-id (fn [db [_ & opts]] (apply get-in db opts)))
-          ;; (subscribe :query-id [:foo :bar])
-          (reg-sub
-            :query-id
-            :=> get-in)
-
-  See also: `subscribe`
-  "
-  [subscription-id & args]
-  (swap! subscriptions assoc subscription-id (computation-fn args)))
+(defn- map->signals
+  [signals]
+  (->> (map (fn [[k v]]
+              {k (f/<! v)})
+            signals)
+       (into {})))
 
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
@@ -95,10 +54,103 @@
   "
   [query-vec]
   (let [subscription-id (first query-vec)]
-    (if-let [subscription-fn (subscription-id @subscriptions)]
-      (f/$ (subscription-fn (f/<! app-db) query-vec))
+    (if-let [{:keys [signal-fn computation-fn]}
+             (get @subscriptions subscription-id)]
+      (f/$ (computation-fn
+            (let [signals (signal-fn query-vec)]
+              (cond
+                (vector? signals) (map #(f/<! %) signals)
+                (map? signals)    (map->signals signals)
+                :else             (f/<! signals)))
+            query-vec))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
+(defn build-sub-map
+  [sub-fn args]
+  (let [[op f]
+        (take-last 2 args)
+
+        [input-args computation-fn]
+        (if (or
+             ;; (reg-sub ::foo (fn [_ _]))
+             (nil? f)
+             ;; (reg-sub ::foo (fn [_ _]) (fn [_ _])) ;; input fn
+             (fn? op)
+             ;; (reg-sub ::foo :<- [::bar] (fn [_ _]))) ;; input sugar
+             (vector? op))
+          [(butlast args) (last args)]
+          ;; (reg-sub ::foo ,,, :-> :foo)
+          (let [input-args (drop-last 2 args)]
+            (case op
+              :-> [input-args
+                   (fn [signals _] (f signals))]
+              :=> [input-args
+                   (fn [signals [_ & opts]] (apply f signals opts))]
+              (throw (Exception. (str "Expected `:->` or `:=>` as second-to-last argument, got: " op))))))
+
+        signal-fn
+        (case (count input-args)
+          0 (fn app-db-subscription
+              ([_] app-db)
+              ([_ _] app-db))
+          1 (let [input-fn (first input-args)]
+              (if (fn? input-fn)
+                input-fn
+                (throw (Exception. (str "Expected 2nd argument to be input function, got: " input-fn)))))
+          2 (let [[sugar signal] input-args]
+              (if (and (= :<- sugar) (vector? signal))
+                (fn input-fn
+                  ([_] (sub-fn signal))
+                  ([_ _] (sub-fn signal)))
+                (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args)))))
+          ;; else
+          (let [pairs (partition 2 input-args)
+                sugars (map first pairs)
+                signals (map second pairs)]
+            (if (and (every? #{:<-} sugars) (every? vector? signals))
+              (fn input-fn
+                ([_] (map sub-fn signals))
+                ([_ _] (map sub-fn signals)))
+              (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args))))))]
+    {:signal-fn signal-fn
+     :computation-fn computation-fn}))
+
+(defn reg-sub
+  "A call to `reg-sub` associates a `query-id` with one function.
+
+  The two arguments are:
+
+    - `query-id` - typically a namespaced keyword (later used in subscribe)
+    - a `computation function` which computes the value (output)
+
+  Registers a sub to receive derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
+
+          #!clj
+          (reg-sub
+            :query-id
+            (fn [db [_ foo]]
+              (get db foo)))
+
+  It also supports the arrow syntax sugar of re-frame:
+
+          #!clj
+          ;; equivalent to (reg-sub :query-id (fn [db _] (:foo db)))
+          ;; (subscribe [:query-id])
+          (reg-sub
+            :query-id
+            :-> :foo))
+
+          #!clj
+          ;; equivalent to (reg-sub :query-id (fn [db [_ & opts]] (apply get-in db opts)))
+          ;; (subscribe [:query-id [[:foo :bar]]])
+          (reg-sub
+            :query-id
+            :=> get-in)
+
+  See also: `subscribe`
+  "
+  [subscription-id & args]
+  (swap! subscriptions assoc subscription-id (build-sub-map subscribe args)))
 
 ;; Effects
 
