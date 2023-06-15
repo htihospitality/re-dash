@@ -38,7 +38,7 @@ Then, add the `re-dash` dependency
 #### from clojars
 
 ```edn
-:deps {net.clojars.htihospitality/re-dash {:mvn/version "0.1.3"}}
+:deps {net.clojars.htihospitality/re-dash {:mvn/version "0.2.0"}}
 ```
 
 #### from a commit

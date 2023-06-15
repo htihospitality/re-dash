@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.2.0 - 2023-06-15
+### Changes
+- [Issue 2](https://github.com/htihospitality/re-dash/issues/2) Added shorthand syntactic sugar to subscriptions, as per re-frame - thanks [@valerauko](https://github.com/valerauko)
+- [Issue 3](https://github.com/htihospitality/re-dash/issues/3) Added signals support to subscriptions (layer 3 - materialized views as per re-frame) - thanks [@valerauko](https://github.com/valerauko)
+- [Issue 4](https://github.com/htihospitality/re-dash/issues/4) Updated [readme](https://github.com/htihospitality/re-dash#development) to add re-dash library development guidelines
+
 ## 0.1.3 - 2023-06-09
 ### Changes
 - Revert back to cljd namespaces as cljdoc errors out
