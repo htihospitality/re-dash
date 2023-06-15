@@ -6,10 +6,3 @@
  :aliases {:cljd {:main-opts ["-m" "cljd.build"]}}
  :cljd/opts {:kind :flutter
              :main acme.main}}
-
-
-#_{:git/url "https://github.com/valerauko/re-dash.git"
-         :sha "1dd8283dcd69bdf0e1648209565d2fd0341833eb"}
-
-#_{:git/url "https://github.com/htihospitality/re-dash.git"
-         :sha "a188a20ee0474a3f64acb1515ac365ad17fdcdd8"}
