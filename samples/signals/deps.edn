@@ -1,0 +1,15 @@
+{:paths ["src"]
+ :deps {tensegritics/clojuredart
+        {:git/url "https://github.com/tensegritics/ClojureDart.git"
+         :sha "8d5916c0dc87146dc2e8921aaa7fd5dc3c6c3401"}
+        net.clojars.htihospitality/re-dash {:mvn/version "0.2.0"}}
+ :aliases {:cljd {:main-opts ["-m" "cljd.build"]}}
+ :cljd/opts {:kind :flutter
+             :main acme.main}}
+
+
+#_{:git/url "https://github.com/valerauko/re-dash.git"
+         :sha "1dd8283dcd69bdf0e1648209565d2fd0341833eb"}
+
+#_{:git/url "https://github.com/htihospitality/re-dash.git"
+         :sha "a188a20ee0474a3f64acb1515ac365ad17fdcdd8"}

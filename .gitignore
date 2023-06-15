@@ -33,6 +33,12 @@
 /samples/counter/linux/
 /samples/counter/pubspec.lock
 /samples/counter/test/
+/samples/signals/.clojuredart/
+/samples/signals/analysis_options.yaml
+/samples/signals/lib/cljd-out/
+/samples/signals/linux/
+/samples/signals/pubspec.lock
+/samples/signals/test/
 /.clojuredart/
 /.dart_tool/
 /build/
