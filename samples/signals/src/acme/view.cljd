@@ -1,0 +1,26 @@
+(ns acme.view
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.model :as model]
+            [hti.re-dash :as rd]))
+
+(def counter
+  (m/Column
+   .mainAxisAlignment m/MainAxisAlignment.center
+   .children
+   [(f/widget
+      :watch [current-count (rd/subscribe [::model/get-count])]
+      (m/Text (str "Showing a simple extractor: The count is: " current-count)))
+    (f/widget
+      :watch [current-count (rd/subscribe [::model/get-count-single])]
+      (m/Text (str "Showing a single signal: " current-count)))
+    (f/widget
+      :watch [current-count (rd/subscribe [::model/get-count-vec])]
+      (m/Text (str "Showing a vector of signals: " current-count)))
+    (f/widget
+      :watch [current-count (rd/subscribe [::model/get-count-map])]
+      (m/Text (str "Showing a map of signals: " current-count)))
+    (m/IconButton
+     .icon (m/Icon (m/Icons.add_circle_outline))
+     .onPressed #(rd/dispatch [::model/count]))
+    (m/Text "Click me to count!")]))

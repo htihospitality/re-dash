@@ -52,6 +52,7 @@ Then, add the `re-dash` dependency
 ## Samples
 
 - `samples/counter` Shows an example of an incrementing counter when clicked
+- `samples/signals` Same as 'samples/counter' but showing various subscription signals: single, vector & map
 - `samples/fetch` Shows an example of data fetching from an http endpoint, using effects
 
 ## Quickstart
@@ -140,6 +141,14 @@ Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsh
  (m/Text (str current-count)))
 ...
 ```
+
+This example assumes a subscription called `get-count` has been pre-registered in the model.
+
+- See `samples/counter` for a full example of registering the subscription.
+- See `samples/signals` for more examples of registering subscriptions using extractors and/or signals.
+- Also see [re-frame subscriptions](https://day8.github.io/re-frame/subscriptions/) for a more detailed description.
+- Note that the re-frame shorthand [syntactic sugar](https://day8.github.io/re-frame/subscriptions/#syntactic-sugar) is also supported.
+
 [More Info](http://day8.github.io/re-frame/a-loop/#domino-4-query)
 
 ### 5th Domino - View
