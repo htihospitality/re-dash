@@ -7,7 +7,7 @@
   (rd/reg-event-fx
    ::count
    (fn [{:keys [db]} _]
-     (let [current-count ((fnil inc 0) (:current-count db))]
+     (let [current-count (inc (:current-count db 0))]
        {:db (assoc db :current-count current-count)
         ::log-count current-count})))
 
