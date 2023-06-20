@@ -2,12 +2,6 @@
   (:require [hti.re-dash :as rd]))
 
 (defn register!
-  "Ideally these registrations should be done in the name space directly
-  as opposed to inside a function call. The problem is the dart compiler
-  removes them during the tree shaking process due to them not being directly
-  referenced anywhere else.
-
-  Perhaps there is a way to mark these as protected so they won't be removed?"
   []
 
   (rd/reg-event-fx
