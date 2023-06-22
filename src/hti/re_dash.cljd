@@ -188,6 +188,88 @@
     (when-not effect-fn (throw (Exception. (str "Effect not found: " effect-id))))
     (effect-fn effect)))
 
+(defn- do-fx!
+  [{:keys [effects] :as context}]
+
+  ;; Do :db effect first
+  (when-let [db (:db effects)]
+    (reset! app-db db))
+
+  ;; Do other effects
+  (doseq [effect-id (-> effects (dissoc :db) keys)]
+    (condp = effect-id
+
+      :dispatch
+      (do-dispatch (:dispatch effects))
+
+      :dispatch-later
+      (let [{:keys [ms dispatch]} (:dispatch-later effects)]
+        (da/Future.delayed (Duration .milliseconds ms)
+                           #(do-dispatch dispatch)))
+
+      :fx
+      (doseq [[effect-id effect] (:fx effects)]
+        (if (#{:dispatch :dispatch-later} effect-id)
+          (do-dispatch effect)
+          (execute! effect-id effect)))
+
+      :deregister-event-handler
+      (swap! events dissoc (:deregister-event-handler effects))
+
+      ;; User effect
+      (execute! effect-id (effect-id effects))))
+
+  context)
+
+
+;; Coeffects
+
+(defonce ^:private coeffects (atom {}))
+
+(defn reg-cofx
+  "Registers a coeffect by cofx-id with the function used
+  to obtain a value from the outside world (like local storage etc.)"
+  [cofx-id f]
+  (swap! coeffects assoc cofx-id f))
+
+
+;; Interceptors
+
+(defn ->interceptor
+  "Creates a new interceptor identified by the keywordized id
+  and with nillable before and after functions"
+  [id before after]
+  {:id     id
+   :before before
+   :after  after})
+
+(def do-fx-interceptor
+  (->interceptor :re-dash/do-fx
+                 nil
+                 do-fx!))
+
+(defn prime-cofx-interceptor
+  "Prime the coeffects by adding the event and current db value"
+  [event-vec]
+  (->interceptor :re-dash/prime-cofx
+                 (fn [context]
+                   (assoc context :coeffects {:event event-vec
+                                              :db @app-db}))
+                 nil))
+
+(defn inject-cofx
+  "Injects a registered cofx (identified by cofx-id) into the interceptor chain
+  An optional arg can be supplied for example some lookup key"
+  ([cofx-id]
+   (inject-cofx cofx-id nil))
+  ([cofx-id arg]
+   (->interceptor cofx-id
+                  (fn [context]
+                    (if-let [f (cofx-id @coeffects)]
+                      (update context :coeffects #(f % arg))
+                      (throw (Exception. (str "Coeffect not found: " cofx-id)))))
+                  nil)))
+
 
 ;; Events
 
@@ -218,8 +300,14 @@
           {:db (assoc db :some-key arg1)          ;; return a map of effects
            :fx [[:dispatch [:some-event arg2]]]}))
   "
-  [event-id f]
-  (swap! events assoc event-id {:event-fn f :event-type :fx}))
+
+  ([event-id f]
+   (reg-event-fx event-id [] f))
+  ([event-id interceptors f]
+   (let [handler-interceptor (->interceptor :handler f nil)]
+     (swap! events assoc event-id
+            {:interceptors (conj interceptors handler-interceptor)
+             :event-type :fx}))))
 
 (defn reg-event-db
   "Register the given event `handler` (function) for the given `id`:
@@ -246,47 +334,51 @@
             (update :key + arg2))))   ;; return updated db
   "
   [event-id f]
-  (swap! events assoc event-id {:event-fn f :event-type :db}))
+  (swap! events assoc event-id
+         {:interceptors [(->interceptor :handler f nil)]
+          :event-type :db}))
+
+(defn- interceptors-sweep-before
+  "Call all the interceptors' before functions in specified order"
+  [event-type event-vec interceptors]
+  (reduce (fn [{:keys [coeffects] :as context}
+               {:keys [id before]}]
+            (if before
+              (if (= :handler id)
+                (assoc context :effects
+                       (case event-type
+                         :db {:db (before (:db coeffects) event-vec)}
+                         :fx (before coeffects event-vec)))
+                (before context))
+              context))
+          {}
+          interceptors))
+
+(defn- interceptors-sweep-after
+  "Call all the interceptors' after functions in reverse order"
+  [interceptors context-before]
+  (reduce (fn [context {:keys [id after]}]
+            (if after
+              (if (= :handler id)
+                context            ;; no-op
+                (after context))
+              context))
+          context-before
+          (reverse interceptors)))
 
 (defn- do-dispatch
   [event-vec]
   (let [event-id (first event-vec)
-        {:keys [event-fn event-type]} (event-id @events)
-        _ (when-not event-fn (throw (Exception. (str "Event not found: " event-id))))
-        effects (case event-type
-                  :db {:db (await (event-fn @app-db event-vec))}
-                  :fx (await (event-fn {:db @app-db} event-vec)))]
+        {:keys [interceptors event-type] :as registered-event} (event-id @events)
+        all-interceptors (concat [do-fx-interceptor
+                                  (prime-cofx-interceptor event-vec)]
+                                 interceptors)]
 
-    ;; Do :db effect first
+    (when-not registered-event
+      (throw (Exception. (str "Event not found: " event-id))))
 
-    (when-let [db (:db effects)]
-        (reset! app-db db))
-
-
-    ;; Do other effects
-
-    (doseq [effect-id (-> effects (dissoc :db) keys)]
-      (condp = effect-id
-
-        :dispatch
-        (do-dispatch (:dispatch effects))
-
-        :dispatch-later
-        (let [{:keys [ms dispatch]} (:dispatch-later effects)]
-          (da/Future.delayed (Duration .milliseconds ms)
-                             #(do-dispatch dispatch)))
-
-        :fx
-        (doseq [[effect-id effect] (:fx effects)]
-          (if (#{:dispatch :dispatch-later} effect-id)
-            (do-dispatch effect)
-            (execute! effect-id effect)))
-
-        :deregister-event-handler
-        (swap! events dissoc (:deregister-event-handler effects))
-
-        ;; User effect
-        (execute! effect-id (effect-id effects))))))
+    (->> (interceptors-sweep-before event-type event-vec all-interceptors)
+         (interceptors-sweep-after all-interceptors))))
 
 (defn dispatch-sync
   "Synchronously (immediately) process `event`. It does **not** queue

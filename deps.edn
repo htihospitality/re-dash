@@ -1,7 +1,7 @@
 {:paths ["src"]
  :deps {tensegritics/clojuredart
         {:git/url "https://github.com/tensegritics/ClojureDart.git"
-         :sha "bb8b648a03e9caac58213d7e3dcb88940317e74b"}}
+         :sha "f2709454569ca0bc7f666f475fb09293fbb1eb31"}}
  :aliases
  {:test
   {:extra-paths ["test"]
