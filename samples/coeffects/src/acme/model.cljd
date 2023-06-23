@@ -1,0 +1,28 @@
+(ns acme.model
+  (:require [hti.re-dash :as rd]))
+
+(defn register!
+  []
+
+  (rd/reg-event-fx
+    ::calc-tomorrow
+    [(rd/inject-cofx :now)]                         ;; <== THIS
+    (fn [{:keys [db now]} _]
+      (let [tomorrow (.add now (Duration .days 1))]
+        {:db (assoc db :tomorrow tomorrow)
+         ::log-tomorrow tomorrow})))
+
+  (rd/reg-sub
+    ::get-tomorrow
+    (fn [db _]
+      (:tomorrow db)))
+
+  (rd/reg-cofx                                      ;; <== THIS
+    :now
+    (fn [cofx _]
+      (assoc cofx :now (DateTime/now))))
+
+  (rd/reg-fx
+    ::log-tomorrow
+    (fn [tomorrow]
+      (println (str "Tomorrow  is " tomorrow)))))

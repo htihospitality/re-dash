@@ -14,6 +14,13 @@ A [ClojureDart](https://github.com/Tensegritics/ClojureDart) framework, inspired
 * Interact with global state via events & subscriptions
 * Handle side effects at the edge with effect handlers
 * Familiar api if coming from re-frame
+  * [Event Dispatch](http://day8.github.io/re-frame/a-loop/#1st-domino-event-dispatch)
+  * [Event Handling](http://day8.github.io/re-frame/a-loop/#2nd-domino-event-handling)
+    * [Coeffects](http://day8.github.io/re-frame/Coeffects/)
+    * [Interceptors](http://day8.github.io/re-frame/Interceptors/)
+  * [Effect Handling](http://day8.github.io/re-frame/a-loop/#3rd-domino-effect-handling)
+  * [Signal Graph](http://day8.github.io/re-frame/a-loop/#domino-4-query)
+  * [Subscriptions](http://day8.github.io/re-frame/a-loop/#domino-5-view)
 
 ## Documentation
 
@@ -38,7 +45,7 @@ Then, add the `re-dash` dependency
 #### from clojars
 
 ```edn
-:deps {net.clojars.htihospitality/re-dash {:mvn/version "0.2.0"}}
+:deps {net.clojars.htihospitality/re-dash {:mvn/version "0.3.0"}}
 ```
 
 #### from a commit
@@ -52,8 +59,9 @@ Then, add the `re-dash` dependency
 ## Samples
 
 - `samples/counter` Shows an example of an incrementing counter when clicked
-- `samples/signals` Same as 'samples/counter' but showing various subscription signals: single, vector & map
 - `samples/fetch` Shows an example of data fetching from an http endpoint, using effects
+- `samples/signals` Same as 'samples/counter' but showing various subscription signals: single, vector & map
+- `samples/coeffects` Shows an example of injecting coeffects into an event handler
 
 ## Quickstart
 
@@ -77,7 +85,7 @@ The full working example is available under `samples/counter`
 
 ...
 ```
-[More info](http://day8.github.io/re-frame/a-loop/#1st-domino-event-dispatch)
+[More info](http://day8.github.io/re-frame/dominoes-30k/#domino-1-event-dispatch)
 
 ### 2nd Domino - Event Handling
 
@@ -99,7 +107,7 @@ Both `reg-event-db` and `reg-event-fx` are supported
 ...
 
 ```
-[More info](http://day8.github.io/re-frame/a-loop/#2nd-domino-event-handling)
+[More info](http://day8.github.io/re-frame/dominoes-30k/#domino-2-event-handling)
 
 ### 3rd Domino - Effect Handling
 
@@ -122,7 +130,7 @@ Built-in effects: `:db` `:fx` `:dispatch` `diapatch-later` `:deregister-event-ha
 
 Tip: Need to fetch some data? Do it here then dispatch a new event passing the response.
 
-[More info](http://day8.github.io/re-frame/a-loop/#3rd-domino-effect-handling)
+[More info](http://day8.github.io/re-frame/dominoes-30k/#domino-3-effect-handling)
 
 ### 4th Domino - Query
 
@@ -149,7 +157,7 @@ This example assumes a subscription called `get-count` has been pre-registered i
 - Also see [re-frame subscriptions](https://day8.github.io/re-frame/subscriptions/) for a more detailed description.
 - Note that the re-frame shorthand [syntactic sugar](https://day8.github.io/re-frame/subscriptions/#syntactic-sugar) is also supported.
 
-[More Info](http://day8.github.io/re-frame/a-loop/#domino-4-query)
+[More Info](http://day8.github.io/re-frame/dominoes-30k/#domino-4-query)
 
 ### 5th Domino - View
 
@@ -176,7 +184,7 @@ Pure. No reference to global state.
     (m/Text "Click me to count!")]))
 
 ```
-[More info](http://day8.github.io/re-frame/a-loop/#domino-5-view)
+[More info](http://day8.github.io/re-frame/dominoes-30k/#domino-5-view
 
 Note, this is a contrived example to illustrate usage of this library. Best practice for when state remains local to the widget (for example key presses in a text field) should be handled in a local atom for example:
 
@@ -204,7 +212,7 @@ Note, this is a contrived example to illustrate usage of this library. Best prac
 
 Done.
 
-[More info](http://day8.github.io/re-frame/a-loop/#domino-6-dom)
+[More info](http://day8.github.io/re-frame/dominoes-30k/#domino-6-dom)
 
 ## Registering events, effects & subscriptions
 
@@ -253,11 +261,6 @@ and in the model
 ```
 
 This does come with a drawback, as whenever we make a change in the `model` name space, _hot reload_ does not pick up the changes, so a _hot restart_ is needed instead. Note this only affect our `model` name space, _hot reload_ works fine in our _view_. Maybe there is a way to keep our event registrations from being tree shaken, if so, we'd love to hear it!
-
-## Not (yet) supported
-
-* [Coeffects](https://github.com/day8/re-frame/blob/master/docs/Coeffects.md)
-* [Interceptors](https://github.com/day8/re-frame/blob/master/docs/Interceptors.md)
 
 ## Issues and features
 

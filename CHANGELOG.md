@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.3.0 - 2023-06-23
+### Changes
+- Added support for [Coeffects](http://day8.github.io/re-frame/Coeffects/)
+- Added support for [Interceptors](http://day8.github.io/re-frame/Interceptors/)
+
 ## 0.2.0 - 2023-06-15
 ### Changes
 - [Issue 2](https://github.com/htihospitality/re-dash/issues/2) Added shorthand syntactic sugar to subscriptions, as per re-frame - thanks [@valerauko](https://github.com/valerauko)

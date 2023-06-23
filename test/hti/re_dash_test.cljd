@@ -1,7 +1,7 @@
 (ns hti.re-dash-test
   (:require [clojure.test :refer [deftest is testing use-fixtures]]
             [cljd.flutter :as f]
-            [hti.re-dash :refer [build-sub-map]]))
+            [hti.re-dash :refer [build-sub-map] :as rd]))
 
 (defn reset-app-db
   ([] (reset! hti.re-dash/app-db {:foo {:bar 42} :baz 9001}))
@@ -223,3 +223,51 @@
                     dummy-subscribe
                     (list :<- [::hoge] :<- [::fuga] :invalid> (fn [_ _]))))
           "Raises on unknown syntax sugar"))))
+
+
+;; Events
+
+(deftest dispatch-event-db
+
+  (rd/reg-event-db
+    ::count-db
+    (fn [db _]
+      (let [current-count (inc (:current-count-db db 0))]
+        (assoc db :current-count-db current-count))))
+
+  (rd/dispatch-sync [::count-db])
+
+  (is (= 1
+         (:current-count-db @hti.re-dash/app-db))))
+
+(deftest dispatch-event-fx
+
+  (rd/reg-event-fx
+    ::count-fx
+    (fn [{:keys [db]} _]
+      (let [current-count (inc (:current-count-fx db 0))]
+        {:db (assoc db :current-count-fx current-count)})))
+
+  (rd/dispatch-sync [::count-fx])
+
+  (is (= 1
+         (:current-count-fx @hti.re-dash/app-db))))
+
+(deftest dispatch-event-cofx
+
+  (rd/reg-cofx
+    :add-val
+    (fn [cofx _]
+      (assoc cofx :add-val 5)))
+
+  (rd/reg-event-fx
+    ::count-cofx
+    [(rd/inject-cofx :add-val)]
+    (fn [{:keys [db add-val]} _]
+      (let [current-count (+ (:current-count-cofx db 0) add-val)]
+        {:db (assoc db :current-count-cofx current-count)})))
+
+  (rd/dispatch-sync [::count-cofx])
+
+  (is (= 5
+         (:current-count-cofx @hti.re-dash/app-db))))

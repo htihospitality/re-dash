@@ -1,0 +1,17 @@
+(ns acme.view
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.model :as model]
+            [hti.re-dash :as rd]))
+
+(def tomorrow
+  (m/Column
+    .mainAxisAlignment m/MainAxisAlignment.center
+    .children
+    [(f/widget
+       :watch [tomorrow (rd/subscribe [::model/get-tomorrow])]
+       (m/Text (str tomorrow)))
+     (m/ElevatedButton
+       .child (m/Text "Calculate")
+       .onPressed #(rd/dispatch [::model/calc-tomorrow]))
+     (m/Text "Click me to calculate tomorrow at this time!")]))
