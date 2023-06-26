@@ -262,7 +262,7 @@
 
   (rd/reg-event-fx
     ::count-cofx
-    [(rd/inject-cofx :add-val)]
+    [(rd/inject-cofx :add-val)]                  ;; <== The test
     (fn [{:keys [db add-val]} _]
       (let [current-count (+ (:current-count-cofx db 0) add-val)]
         {:db (assoc db :current-count-cofx current-count)})))
@@ -271,3 +271,22 @@
 
   (is (= 5
          (:current-count-cofx @hti.re-dash/app-db))))
+
+(deftest dispatch-event-path
+
+  (let [path [:path :to :current]]
+
+    (reset! hti.re-dash/app-db
+            {:path {:to {:current {:count 4}}}})
+
+    (rd/reg-event-fx
+      ::count-path
+      [(rd/path path)]                         ;; <== The test
+      (fn [{:keys [db]} _]
+        (let [current (inc (:count db 0))]
+          {:db (assoc db :count current)})))
+
+    (rd/dispatch-sync [::count-path])
+
+    (is (= {:count 5}
+           (get-in @hti.re-dash/app-db path)))))

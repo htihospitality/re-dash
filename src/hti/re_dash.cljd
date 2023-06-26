@@ -270,10 +270,28 @@
                       (throw (Exception. (str "Coeffect not found: " cofx-id)))))
                   nil)))
 
+(defn path
+  "Returns an interceptor which acts somewhat like clojure.core/update-in, in the sense that the event handler is given a specific part of app-db to change, not all of app-db."
+  [& args]
+  (->interceptor :re-dash/path
+                 (fn [context]
+                   (update-in context [:coeffects :db]
+                              #(get-in % (flatten args))))
+                 (fn [context]
+                   (update-in context [:effects :db]
+                              #(assoc-in @app-db (flatten args) %)))))
+
 
 ;; Events
 
 (defonce ^:private events (atom {}))
+
+(defn- reg-event
+  [event-id interceptors f event-type]
+  (let [handler-interceptor (->interceptor :handler f nil)]
+     (swap! events assoc event-id
+            {:interceptors (conj interceptors handler-interceptor)
+             :event-type event-type})))
 
 (defn reg-event-fx
   "Register the given event `handler` (function) for the given `id`. :
@@ -304,10 +322,7 @@
   ([event-id f]
    (reg-event-fx event-id [] f))
   ([event-id interceptors f]
-   (let [handler-interceptor (->interceptor :handler f nil)]
-     (swap! events assoc event-id
-            {:interceptors (conj interceptors handler-interceptor)
-             :event-type :fx}))))
+   (reg-event event-id interceptors f :fx)))
 
 (defn reg-event-db
   "Register the given event `handler` (function) for the given `id`:
@@ -333,10 +348,10 @@
             (dissoc arg1)
             (update :key + arg2))))   ;; return updated db
   "
-  [event-id f]
-  (swap! events assoc event-id
-         {:interceptors [(->interceptor :handler f nil)]
-          :event-type :db}))
+  ([event-id f]
+   (reg-event-db event-id [] f))
+  ([event-id interceptors f]
+   (reg-event event-id interceptors f :db)))
 
 (defn- interceptors-sweep-before
   "Call all the interceptors' before functions in specified order"
