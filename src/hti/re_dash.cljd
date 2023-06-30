@@ -19,6 +19,14 @@
             signals)
        (into {})))
 
+(defn- test-map->signals
+  "Same as map->signals but used in tests, see test-subscribe"
+  [signals]
+  (->> (map (fn [[k v]]
+              {k @v})
+            signals)
+       (into {})))
+
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
 
@@ -63,6 +71,23 @@
                 (map? signals)    (map->signals signals)
                 :else             (f/<! signals)))
             query-vec))
+      (throw (Exception. (str "Subscription not found: " subscription-id))))))
+
+(defn test-subscribe
+  "Same as subscribe but used in tests, i.e. can be de-referenced
+  Cells can't be de-referenced outside a reactive context,
+  see: https://clojurians.slack.com/archives/C03A6GE8D32/p1687275849503059"
+  [query-vec]
+  (let [subscription-id (first query-vec)]
+    (if-let [{:keys [signal-fn computation-fn]}
+             (get @subscriptions subscription-id)]
+      (atom (computation-fn
+              (let [signals (signal-fn query-vec)]
+                (cond
+                  (vector? signals) (map deref signals)
+                  (map? signals)    (test-map->signals signals)
+                  :else             @signals))
+              query-vec))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 (defn build-sub-map
@@ -437,3 +462,14 @@
   "
   [event-vec]
   (do-dispatch event-vec))
+
+(defn register-defaults!
+  "Optional default registrations for convenience"
+  []
+
+  ;; Event to initialise app-db with provided state.
+  ;; db can be omitted which will result in empty app-db.
+  (reg-event-db
+    :re-dash/initialize-db
+    (fn [_ [_ db]]
+      (or db {}))))
