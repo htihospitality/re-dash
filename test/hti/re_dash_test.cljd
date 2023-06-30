@@ -26,7 +26,7 @@
 
 (use-fixtures :once default-subscriptions)
 
-(use-fixtures :each rd-testing/reset-app-db)
+(use-fixtures :each rd-testing/reset-app-db-fixture)
 
 (deftest build-sub-map-test
 

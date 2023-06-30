@@ -4,7 +4,7 @@
 
 ;; test fixtures
 
-(defn reset-app-db
+(defn reset-app-db-fixture
   "Test fixture that will reset / empty app-db before
   and after running the test(s)"
   ([]

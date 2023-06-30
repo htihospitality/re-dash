@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.4.0 - 2023-06-30
+### Changes
+- Added `hti.re-dash-testing/subscribe` useful to be able to de-reference subscriptions from tests (only [layer 2 - extractors](https://day8.github.io/re-frame/subscriptions/#the-four-layers) currently supported)
+- Added `hti.re-dash-testing/reset-app-db-fixture` test fixture that will reset / empty app-db before and after test(s)
+- Added `hti.re-dash/register-defaults!` optionally useful to pre-register common events like `:re-dash/initialize-db` to set / reset the app state
+- Added built in [path](https://day8.github.io/re-frame/api-re-frame.core/#path) interceptor
+
+
 ## 0.3.0 - 2023-06-23
 ### Changes
 - Added support for [Coeffects](http://day8.github.io/re-frame/Coeffects/)
