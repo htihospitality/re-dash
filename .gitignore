@@ -63,3 +63,9 @@
 /samples/signals/web/
 /samples/signals/windows/
 /samples/fetch/.clojuredart/
+/samples/counter/.metadata
+/samples/counter/android/
+/samples/counter/ios/
+/samples/counter/macos/
+/samples/counter/web/
+/samples/counter/windows/
