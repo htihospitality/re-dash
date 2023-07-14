@@ -23,4 +23,4 @@
   Cells can't be de-referenced outside a reactive context,
   see: https://clojurians.slack.com/archives/C03A6GE8D32/p1687275849503059"
   [query-vec]
-  (rd/test-subscribe query-vec))
+  (rd/derefable-subscribe query-vec))
