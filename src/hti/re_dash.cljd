@@ -19,8 +19,8 @@
             signals)
        (into {})))
 
-(defn- test-map->signals
-  "Same as map->signals but used in tests, see test-subscribe"
+(defn- derefable-map->signals
+  "Same as map->signals but used in tests, see derefable-subscribe"
   [signals]
   (->> (map (fn [[k v]]
               {k @v})
@@ -62,10 +62,10 @@
   "
   [query-vec]
   (let [subscription-id (first query-vec)]
-    (if-let [{:keys [signal-fn computation-fn]}
+    (if-let [{:keys [signal-builder computation-fn]}
              (get @subscriptions subscription-id)]
       (f/$ (computation-fn
-            (let [signals (signal-fn query-vec)]
+            (let [signals ((signal-builder subscribe) query-vec)]
               (cond
                 (vector? signals) (map #(f/<! %) signals)
                 (map? signals)    (map->signals signals)
@@ -73,25 +73,25 @@
             query-vec))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
-(defn test-subscribe
+(defn derefable-subscribe
   "Same as subscribe but used in tests, i.e. can be de-referenced
   Cells can't be de-referenced outside a reactive context,
   see: https://clojurians.slack.com/archives/C03A6GE8D32/p1687275849503059"
   [query-vec]
   (let [subscription-id (first query-vec)]
-    (if-let [{:keys [signal-fn computation-fn]}
+    (if-let [{:keys [signal-builder computation-fn]}
              (get @subscriptions subscription-id)]
       (atom (computation-fn
-              (let [signals (signal-fn query-vec)]
+              (let [signals ((signal-builder derefable-subscribe) query-vec)]
                 (cond
                   (vector? signals) (map deref signals)
-                  (map? signals)    (test-map->signals signals)
+                  (map? signals)    (derefable-map->signals signals)
                   :else             @signals))
               query-vec))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 (defn build-sub-map
-  [sub-fn args]
+  [args]
   (let [[op f]
         (take-last 2 args)
 
@@ -113,31 +113,34 @@
                    (fn [signals [_ & opts]] (apply f signals opts))]
               (throw (Exception. (str "Expected `:->` or `:=>` as second-to-last argument, got: " op))))))
 
-        signal-fn
+        signal-builder
         (case (count input-args)
-          0 (fn app-db-subscription
-              ([_] app-db)
-              ([_ _] app-db))
+          0 (fn [_]
+              (fn app-db-subscription
+                ([_] app-db)
+                ([_ _] app-db)))
           1 (let [input-fn (first input-args)]
               (if (fn? input-fn)
-                input-fn
+                (fn [_] input-fn)
                 (throw (Exception. (str "Expected 2nd argument to be input function, got: " input-fn)))))
           2 (let [[sugar signal] input-args]
               (if (and (= :<- sugar) (vector? signal))
-                (fn input-fn
-                  ([_] (sub-fn signal))
-                  ([_ _] (sub-fn signal)))
+                (fn [sub-fn]
+                  (fn input-fn
+                    ([_] (sub-fn signal))
+                    ([_ _] (sub-fn signal))))
                 (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args)))))
           ;; else
           (let [pairs (partition 2 input-args)
                 sugars (map first pairs)
                 signals (map second pairs)]
             (if (and (every? #{:<-} sugars) (every? vector? signals))
-              (fn input-fn
-                ([_] (map sub-fn signals))
-                ([_ _] (map sub-fn signals)))
+              (fn [sub-fn]
+                (fn input-fn
+                  ([_] (map sub-fn signals))
+                  ([_ _] (map sub-fn signals))))
               (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args))))))]
-    {:signal-fn signal-fn
+    {:signal-builder signal-builder
      :computation-fn computation-fn}))
 
 (defn reg-sub
@@ -175,7 +178,7 @@
   See also: `subscribe`
   "
   [subscription-id & args]
-  (swap! subscriptions assoc subscription-id (build-sub-map subscribe args)))
+  (swap! subscriptions assoc subscription-id (build-sub-map args)))
 
 ;; Effects
 
@@ -305,7 +308,6 @@
                  (fn [context]
                    (update-in context [:effects :db]
                               #(assoc-in @app-db (flatten args) %)))))
-
 
 ;; Events
 

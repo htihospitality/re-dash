@@ -38,95 +38,91 @@
           input-fn (fn dummy-input ([] dummy-state) ([_] dummy-state))]
       (testing "Just computation function"
         ;; (reg-sub ::foo (fn [_ _]) (fn [_ _]))
-        (let [comp-fn #()]
-          (is (= {:signal-fn input-fn :computation-fn comp-fn}
-                 (rd/build-sub-map rd-testing/subscribe (list input-fn comp-fn))))))
+        (let [comp-fn #()
+              {builder :signal-builder computer :computation-fn}
+              (rd/build-sub-map (list input-fn comp-fn))]
+          (is (= (builder rd-testing/subscribe) input-fn))))
       (testing "Bad input"
         (is (thrown? Exception
-                     (rd/build-sub-map rd-testing/subscribe
-                                       (list 42 (fn [_ _]))))
+                     (rd/build-sub-map (list 42 (fn [_ _]))))
             "Raises if input function is not a function"))
       (testing ":-> sugar"
         ;; (reg-sub ::foo (fn [_ _]) :-> :baz)
         (let [coords [::foo]
-              {:keys [signal-fn computation-fn]}
-              (rd/build-sub-map rd-testing/subscribe (list input-fn :-> nil?))]
+              {:keys [signal-builder computation-fn]}
+              (rd/build-sub-map (list input-fn :-> nil?))
+              signal-fn (signal-builder rd-testing/subscribe)]
           (is (= input-fn signal-fn))
           (is (= true (computation-fn @(signal-fn coords) coords)))))
       (testing ":=> sugar"
         ;; (reg-sub ::foo (fn [_ _]) :=> (fn [a b] (or a b)))
         (let [coords [::foo 42]
-              {:keys [signal-fn computation-fn]}
-              (rd/build-sub-map
-                rd-testing/subscribe
-                (list input-fn :=> (fn [a b] (or a (* 2 b)))))]
+              {:keys [signal-builder computation-fn]}
+              (rd/build-sub-map (list input-fn :=> (fn [a b] (or a (* 2 b)))))
+              signal-fn (signal-builder rd-testing/subscribe)]
           (is (= input-fn signal-fn))
           (is (= 84 (computation-fn @(signal-fn coords) coords)))))
       (testing "Bad sugar"
         ;; (reg-sub ::foo (fn [_ _]) :/> (fn [_ _]))
         (is (thrown? Exception
-                     (rd/build-sub-map
-                       rd-testing/subscribe
-                       (list input-fn :invalid> (fn [_ _]))))
+                     (rd/build-sub-map (list input-fn :invalid> (fn [_ _]))))
             "Raises on unknown syntax sugar"))))
   (testing "No input function"
     (testing "Just computation function"
       ;; (reg-sub ::foo (fn [_ _]))
       (let [comp-fn #()
-            {:keys [signal-fn computation-fn]}
-            (rd/build-sub-map rd-testing/subscribe (list comp-fn))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list comp-fn))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (= 9001 (:baz @(signal-fn [])))
             "The signal becomes the default app-db")
         (is (= comp-fn computation-fn))))
     (testing ":-> sugar"
       ;; (reg-sub ::foo :-> :baz)
       (let [coords [::foo]
-            {:keys [signal-fn computation-fn]}
-            (rd/build-sub-map rd-testing/subscribe (list :-> :baz))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :-> :baz))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (= 9001 (computation-fn @(signal-fn coords) coords)))))
     (testing ":=> sugar"
       ;; (reg-sub ::foo :=> get-in)
       (let [coords [::foo :foo :baz]
-            {:keys [signal-fn computation-fn]}
-            (rd/build-sub-map
-              rd-testing/subscribe
-              (list :=> (fn [db a b] {(b db) (a db)})))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :=> (fn [db a b] {(b db) (a db)})))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (= {9001 {:bar 42}} (computation-fn @(signal-fn coords) coords)))))
     (testing "Bad sugar"
       ;; (reg-sub ::foo :/> (fn [_ _]))
       (is (thrown? Exception
-                   (rd/build-sub-map
-                     rd-testing/subscribe
-                     (list :invalid> (fn [_ _]))))
+                   (rd/build-sub-map (list :invalid> (fn [_ _]))))
           "Raises on unknown syntax sugar")))
   (testing "One sugar input pair"
     (testing "Computation function"
       ;; (reg-sub ::foo :<- [::hoge] (fn [n _] n))
       (let [coords [::foo]
             comp-fn (fn [n _] n)
-            {:keys [signal-fn computation-fn]}
-            (rd/build-sub-map rd-testing/subscribe (list :<- [::hoge] comp-fn))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :<- [::hoge] comp-fn))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (= 42 @(signal-fn coords)))
         (is (= comp-fn computation-fn))))
     (testing "Bad input sugar"
       (is (thrown? Exception
-                   (rd/build-sub-map
-                     rd-testing/subscribe
-                     (list :<invalid [::hoge] (fn [_ _]))))
+                   (rd/build-sub-map (list :<invalid [::hoge] (fn [_ _]))))
           "Raises on unknown syntax sugar"))
     (testing "Missing subscription"
       (let [coords [::foo]
-            {:keys [computation-fn signal-fn]}
-            (rd/build-sub-map rd-testing/subscribe (list :<- [::piyo] (fn [_ _])))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :<- [::piyo] (fn [_ _])))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (thrown? Exception (computation-fn @(signal-fn coords) coords))
             "If the subscription used as input isn't registered, raises when subscribed to")))
     (testing ":-> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :-> (fn [n _] (* 2 n)))
       (let [coords [::foo 2]
-            {:keys [signal-fn computation-fn]}
-            (rd/build-sub-map
-              rd-testing/subscribe
-              (list :<- [::hoge] :-> (fn [n] (* 2 n))))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :<- [::hoge] :-> (fn [n] (* 2 n))))
+            signal-fn (signal-builder rd-testing/subscribe)]
         ;; TODO somehow deref Cell to check value
         (is (= 42 @(signal-fn coords)))
         (is (= 84 (computation-fn @(signal-fn coords) coords))
@@ -134,88 +130,81 @@
     (testing ":=> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :=> (fn [db a b] [db a b]))
       (let [coords [::foo :hoge :fuga]
-            {:keys [signal-fn computation-fn]}
+            {:keys [signal-builder computation-fn]}
             (rd/build-sub-map
-              rd-testing/subscribe
-              (list :<- [::hoge] :=> (fn [db a b] [db a b])))]
+              (list :<- [::hoge] :=> (fn [db a b] [db a b])))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (= 42 @(signal-fn coords)))
         (is (= [42 :hoge :fuga] (computation-fn @(signal-fn coords) coords)))))
     (testing "Bad output sugar"
       (is (thrown? Exception
-                   (rd/build-sub-map
-                     rd-testing/subscribe
-                     (list :<- [::hoge] :invalid> (fn [_ _]))))
+                   (rd/build-sub-map (list :<- [::hoge] :invalid> (fn [_ _]))))
           "Raises on unknown syntax sugar")))
   (testing "Multiple sugar pairs"
     (testing "Computation function"
       ;; (reg-sub ::foo :<- [::hoge] :<- [::fuga] (fn [n _] n))
       (let [coords [::foo]
             comp-fn (fn [inputs _] inputs)
-            {:keys [signal-fn computation-fn]}
-            (rd/build-sub-map
-              rd-testing/subscribe
-              (list :<- [::hoge] :<- [::fuga] comp-fn))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :<- [::hoge] :<- [::fuga] comp-fn))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (= (list 42 9001) (map deref (signal-fn coords))))
         (is (= comp-fn computation-fn))))
     (testing "Bad input sugar"
       (is (thrown? Exception
                    (rd/build-sub-map
-                     rd-testing/subscribe
                      (list :<- [::hoge] :<invalid [::fuga] (fn [_ _]))))
           "Raises on unknown syntax sugar")
       (is (thrown? Exception
                    (rd/build-sub-map
-                     rd-testing/subscribe
                      (list :<invalid [::hoge] :<- [::fuga] (fn [_ _]))))
           "Raises on unknown syntax sugar")
       (is (thrown? Exception
                    (rd/build-sub-map
-                     rd-testing/subscribe
                      (list :<invalid [::hoge] :<invalid [::fuga] (fn [_ _]))))
           "Raises on unknown syntax sugar"))
     (testing "Missing subscription"
       (let [coords [::foo]
-            {:keys [computation-fn signal-fn]}
-            (rd/build-sub-map rd-testing/subscribe
-                              (list :<- [::piyo] :<- [::hoge] (fn [_ _])))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :<- [::piyo] :<- [::hoge] (fn [_ _])))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (thrown? Exception (computation-fn @(signal-fn coords) coords))
             "If the subscription used as input isn't registered, raises when subscribed to"))
       (let [coords [::foo]
-            {:keys [computation-fn signal-fn]}
-            (rd/build-sub-map rd-testing/subscribe
-                              (list :<- [::hoge] :<- [::piyo] (fn [_ _])))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :<- [::hoge] :<- [::piyo] (fn [_ _])))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (thrown? Exception (computation-fn @(signal-fn coords) coords))
             "If the subscription used as input isn't registered, raises when subscribed to"))
       (let [coords [::foo]
-            {:keys [computation-fn signal-fn]}
-            (rd/build-sub-map rd-testing/subscribe
-                              (list :<- [::piyo] :<- [::puyo] (fn [_ _])))]
+            {:keys [signal-builder computation-fn]}
+            (rd/build-sub-map (list :<- [::piyo] :<- [::puyo] (fn [_ _])))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (thrown? Exception (computation-fn @(signal-fn coords) coords))
             "If the subscription used as input isn't registered, raises when subscribed to")))
     (testing ":-> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :<- [::fuga] :-> (fn [n] (* 2 n)))
       (let [coords [::foo 2]
-            {:keys [signal-fn computation-fn]}
+            {:keys [signal-builder computation-fn]}
             (rd/build-sub-map
-              rd-testing/subscribe
-              (list :<- [::hoge] :<- [::fuga] :-> (fn [[n _]] (* 2 n))))]
+              (list :<- [::hoge] :<- [::fuga] :-> (fn [[n _]] (* 2 n))))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (= (list 42 9001) (map deref (signal-fn coords))))
         (is (= 84 (computation-fn (map deref (signal-fn coords)) coords))
             "the subscription params are ignored with :->")))
     (testing ":=> sugar"
       ;; (reg-sub ::foo :<- [::hoge] :<- [::fuga] :=> (fn [[_ x] a b] [x a b]))
       (let [coords [::foo :hoge :fuga]
-            {:keys [signal-fn computation-fn]}
+            {:keys [signal-builder computation-fn]}
             (rd/build-sub-map
-              rd-testing/subscribe
-              (list :<- [::hoge] :<- [::fuga] :=> (fn [[_ x] a b] [x a b])))]
+              (list :<- [::hoge] :<- [::fuga] :=> (fn [[_ x] a b] [x a b])))
+            signal-fn (signal-builder rd-testing/subscribe)]
         (is (= (list 42 9001) (map deref (signal-fn coords))))
         (is (= [9001 :hoge :fuga]
                (computation-fn (map deref (signal-fn coords)) coords)))))
     (testing "Bad output sugar"
       (is (thrown? Exception
                    (rd/build-sub-map
-                     rd-testing/subscribe
                      (list :<- [::hoge] :<- [::fuga] :invalid> (fn [_ _]))))
           "Raises on unknown syntax sugar"))))
 
