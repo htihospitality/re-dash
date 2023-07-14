@@ -260,6 +260,18 @@
   [cofx-id f]
   (swap! coeffects assoc cofx-id f))
 
+(defn reg-sub-as-cofx
+  "Registers a \"fake\" subscription as a coeffect to use with `inject-cofx`.
+  Unlike regular subscriptions these are not reactive nor cached. If you need
+  those benefits of regular subscriptions, consider `:watch`ing those in your
+  component then pass them in to the event handler.
+  Injects the current value of the subscription to the coeffects map under the
+  id of the subscription."
+  [[id :as coords]]
+  (reg-cofx
+   id
+   (fn [cofx & args]
+     (assoc cofx id @(derefable-subscribe (into coords args))))))
 
 ;; Interceptors
 

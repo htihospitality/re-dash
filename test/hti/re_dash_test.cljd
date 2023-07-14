@@ -256,6 +256,24 @@
   (is (= 5
          @(rd-testing/subscribe [:get-count]))))
 
+(deftest dispatch-event-subscribe
+  (rd/reg-sub-as-cofx [::hoge])
+  (rd/reg-sub-as-cofx [::fuga])
+  (rd/reg-event-fx
+    :hogefuga-adder
+    [(rd/inject-cofx ::hoge)
+     (rd/inject-cofx ::fuga)]
+    (fn [{db :db ::keys [hoge fuga] :as cofx} _]
+      {:db (assoc db :hogefuga-sum (+ hoge fuga))}))
+
+  (rd/dispatch-sync [:hogefuga-adder])
+
+  (rd/reg-sub
+    :hogefuga-sum
+    :-> :hogefuga-sum)
+
+  (is (= 9043 @(rd-testing/subscribe [:hogefuga-sum]))))
+
 (deftest dispatch-event-path
 
   (let [path [:path :to :current]]
