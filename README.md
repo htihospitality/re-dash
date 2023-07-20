@@ -277,6 +277,28 @@ Normally subscriptions are not able to be de-referenced outside a reactive conte
 
 Use `hti.re-dash-testing/subscribe` instead inside your tests if you need to assert a subscription's value (only [layer 2 - extractors](https://day8.github.io/re-frame/subscriptions/#the-four-layers) currently supported)
 
+## Other Features
+
+### reg-sub-as-cofx
+
+Normally we wouldn't use subscriptions inside event handlers, see [more info](https://github.com/day8/re-frame/blob/master/docs/FAQs/UseASubscriptionInAnEventHandler.md) but in re-dash we have the ability to inject a subscription into an event handler as a coeffect
+
+We do this by registering an existing subscription also as a coeffect with
+
+```
+(hti.re-dash/reg-sub-as-cofx [::existing-sub-id])
+```
+
+Now we can inject this subscription as a coeffect into an event handler
+
+```
+(rd/reg-event-fx
+  ::some-event
+  [(rd/inject-cofx ::existing-sub-id)]
+  (fn [{db :db ::keys [existing-sub-id] :as cofx} _]
+      ...))
+```
+
 ## Issues and features
 
 Please feel free to raise issues on Github or send pull requests
