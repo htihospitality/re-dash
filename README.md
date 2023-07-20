@@ -62,6 +62,7 @@ Then, add the `re-dash` dependency
 - `samples/fetch` Shows an example of data fetching from an http endpoint, using effects
 - `samples/signals` Same as 'samples/counter' but showing various subscription signals: single, vector & map
 - `samples/coeffects` Shows an example of injecting coeffects into an event handler
+- `samples/local_storage` Shows an example of how to initialize shared_preferences and inject values into event handlers using coeffects
 
 ## Quickstart
 
@@ -126,7 +127,7 @@ Both `reg-event-db` and `reg-event-fx` are supported
 ...
 
 ```
-Built-in effects: `:db` `:fx` `:dispatch` `diapatch-later` `:deregister-event-handler`
+Built-in effects: `:db` `:fx` `:dispatch` `dispatch-later` `:deregister-event-handler`
 
 Tip: Need to fetch some data? Do it here then dispatch a new event passing the response.
 
@@ -261,6 +262,20 @@ and in the model
 ```
 
 This does come with a drawback, as whenever we make a change in the `model` name space, _hot reload_ does not pick up the changes, so a _hot restart_ is needed instead. Note this only affect our `model` name space, _hot reload_ works fine in our _view_. Maybe there is a way to keep our event registrations from being tree shaken, if so, we'd love to hear it!
+
+## Testing
+
+re-dash comes with some utilities to help with writing tests
+
+### Fixtures
+
+`hti.re-dash-testing/reset-app-db-fixture` can be used to reset / empty the app-db before and after tests
+
+### Subscriptions
+
+Normally subscriptions are not able to be de-referenced outside a reactive context (like within tests)
+
+Use `hti.re-dash-testing/subscribe` instead inside your tests if you need to assert a subscription's value (only [layer 2 - extractors](https://day8.github.io/re-frame/subscriptions/#the-four-layers) currently supported)
 
 ## Issues and features
 
