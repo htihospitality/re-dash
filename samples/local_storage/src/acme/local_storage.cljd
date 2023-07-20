@@ -1,0 +1,18 @@
+(ns acme.local-storage
+  (:require ["package:shared_preferences/shared_preferences.dart" :as sp]))
+
+(def ^:private storage-ref (atom {}))
+
+(defn init
+  [prefix]
+  (sp/SharedPreferences.setPrefix prefix)
+  (reset! storage-ref (await (sp/SharedPreferences.getInstance))))
+
+(defn get-string
+  [key]
+  (.getString @storage-ref key))
+
+(defn set-string
+  [key value]
+  (.setString @storage-ref key value)
+  value)

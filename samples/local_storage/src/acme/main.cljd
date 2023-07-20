@@ -1,0 +1,24 @@
+(ns acme.main
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.view :as view]
+            [acme.model :as model]
+            [acme.local-storage :as local-storage]))
+
+(defn main []
+
+  (await (local-storage/init "some-prefix."))         ;; <== THIS
+
+  (model/register!)
+
+  (f/run
+    (m/MaterialApp
+     .title "Welcome to Flutter"
+     .theme (m/ThemeData .primarySwatch m.Colors/blue))
+    .home
+    (m/Scaffold
+     .appBar (m/AppBar
+              .title (m/Text "ClojureDart with a splash of re-dash")))
+    .body
+    m/Center
+    view/tomorrow))

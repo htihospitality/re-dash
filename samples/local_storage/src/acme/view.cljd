@@ -1,0 +1,21 @@
+(ns acme.view
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.model :as model]
+            [hti.re-dash :as rd]))
+
+(def tomorrow
+  (f/widget
+    :watch [some-value (rd/subscribe [::model/get-some-value :some-key])]
+    (m/Column
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .children
+      [(m/ElevatedButton
+         .child (m/Text "Set Some Value")
+         .onPressed #(rd/dispatch [::model/set-button-clicked "SOME-VALUE"]))
+       (m/Text "---")
+       (m/ElevatedButton
+         .child (m/Text "Get Some Value")
+         .onPressed #(rd/dispatch [::model/get-button-clicked]))
+       (m/Text "---")
+       (m/Text (str "From local-storage: " some-value))])))

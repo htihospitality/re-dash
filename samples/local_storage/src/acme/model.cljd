@@ -1,0 +1,34 @@
+(ns acme.model
+  (:require [hti.re-dash :as rd]
+            [acme.local-storage :as local-storage]))
+
+(defn register!
+  []
+
+
+  (rd/reg-event-fx
+    ::set-button-clicked
+    (fn [_ [_ some-value]]
+      {::set-some-value some-value}))
+
+  (rd/reg-fx
+    ::set-some-value
+    (fn [some-value]
+      (local-storage/set-string "some-key" some-value)))
+
+  (rd/reg-event-fx
+    ::get-button-clicked
+    [(rd/inject-cofx :local-storage "some-key")]             ;; <== THIS
+    (fn [{:keys [db local-storage]} _]
+      {:db (assoc db :some-key local-storage)}))
+
+  (rd/reg-cofx                                               ;; <== THIS
+    :local-storage
+    (fn [cofx some-key]
+      (assoc cofx :local-storage
+             (local-storage/get-string some-key))))
+
+  (rd/reg-sub
+    ::get-some-value
+    (fn [db [_ some-key]]
+      (some-key db))))
