@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.5.0 - 2023-07-24
+### Changes
+- Added [reg-sub-as-cofx](https://github.com/htihospitality/re-dash#reg-sub-as-cofx) to be able to inject a subscription into an event handler
+- Fixed coeffects returning a Future, so that they're await(ed) on and their value provided to the event handler
+
+
 ## 0.4.0 - 2023-06-30
 ### Changes
 - Added `hti.re-dash-testing/subscribe` useful to be able to de-reference subscriptions from tests (only [layer 2 - extractors](https://day8.github.io/re-frame/subscriptions/#the-four-layers) currently supported)
