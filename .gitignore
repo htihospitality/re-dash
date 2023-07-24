@@ -69,3 +69,14 @@
 /samples/counter/macos/
 /samples/counter/web/
 /samples/counter/windows/
+/samples/fetch/.dart_tool/
+/samples/fetch/build/
+/samples/local_storage/.clojuredart/
+/samples/local_storage/android/
+/samples/local_storage/ios/
+/samples/local_storage/lib/cljd-out/
+/samples/local_storage/linux/
+/samples/local_storage/macos/
+/samples/local_storage/test/
+/samples/local_storage/web/
+/samples/local_storage/windows/

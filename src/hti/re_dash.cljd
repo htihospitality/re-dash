@@ -395,16 +395,17 @@
 (defn- interceptors-sweep-before
   "Call all the interceptors' before functions in specified order"
   [event-type event-vec interceptors]
-  (reduce (fn [{:keys [coeffects] :as context}
-               {:keys [id before]}]
-            (if before
-              (if (= :handler id)
-                (assoc context :effects
-                       (case event-type
-                         :db {:db (before (:db coeffects) event-vec)}
-                         :fx (before coeffects event-vec)))
-                (before context))
-              context))
+  (reduce (fn [result {:keys [id before]}]
+            (let [context (await result)
+                  coeffects (await (:coeffects context))]
+              (if before
+                (if (= :handler id)
+                  (assoc context :effects
+                         (case event-type
+                           :db {:db (before (:db coeffects) event-vec)}
+                           :fx (before coeffects event-vec)))
+                  (before context))
+                context)))
           {}
           interceptors))
 
@@ -431,11 +432,13 @@
     (when-not registered-event
       (throw (Exception. (str "Event not found: " event-id))))
 
-    (->> (interceptors-sweep-before event-type event-vec all-interceptors)
+    (->> (await (interceptors-sweep-before event-type event-vec all-interceptors))
          (interceptors-sweep-after all-interceptors))))
 
-(defn dispatch-sync
-  "Synchronously (immediately) process `event`. It does **not** queue
+(defn ^:deprecated dispatch-sync
+  "DEPRECATED - Use (await (rd/dispatch [:event-id])) instead
+
+  Synchronously (immediately) process `event`. It does **not** queue
   the event for handling later as `dispatch` does.
 
   `event` is a vector and the first element is a keyword
@@ -458,7 +461,7 @@
       (dispatch-sync [:sing :falsetto \"piano accordion\"])
   "
   [event-vec]
-  (do-dispatch event-vec))
+  (await (do-dispatch event-vec)))
 
 (defn ^:async dispatch
   "Queue `event` for processing (handling).
