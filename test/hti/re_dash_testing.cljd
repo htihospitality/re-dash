@@ -9,9 +9,9 @@
   and after running the test(s)"
   ([]
    (rd/register-defaults!)
-   (rd/dispatch-sync [:re-dash/initialize-db]))
+   (await (rd/dispatch [:re-dash/initialize-db])))
   ([_]
-   (rd/dispatch-sync [:re-dash/initialize-db])))
+   (await (rd/dispatch [:re-dash/initialize-db]))))
 
 
 ;; re-dash test facades
