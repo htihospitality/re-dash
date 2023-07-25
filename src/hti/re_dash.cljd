@@ -210,7 +210,7 @@
   [effect-id f]
   (swap! effects assoc effect-id f))
 
-(defn- ^:async execute!
+(defn- execute!
   [effect-id effect]
   (let [effect-fn (effect-id @effects)]
     (when-not effect-fn (throw (Exception. (str "Effect not found: " effect-id))))
@@ -321,6 +321,32 @@
                    (update-in context [:effects :db]
                               #(assoc-in @app-db (flatten args) %)))))
 
+;; Events Queue
+
+(defn- do-dispatch
+  [event-vec]
+  (let [event-id (first event-vec)
+        {:keys [interceptors event-type] :as registered-event} (event-id @events)
+        all-interceptors (concat [do-fx-interceptor
+                                  (prime-cofx-interceptor event-vec)]
+                                 interceptors)]
+
+    (when-not registered-event
+      (throw (Exception. (str "Event not found: " event-id))))
+
+    (->> (await (interceptors-sweep-before event-type event-vec all-interceptors))
+         (interceptors-sweep-after all-interceptors))))
+
+(defonce ^:private events-queue
+  (let [controller (da/StreamController)]
+
+    (.listen (.-stream controller)
+             (fn [event-vec]
+               (await (do-dispatch event-vec))))
+
+    controller))
+
+
 ;; Events
 
 (defonce ^:private events (atom {}))
@@ -421,22 +447,8 @@
           context-before
           (reverse interceptors)))
 
-(defn- do-dispatch
-  [event-vec]
-  (let [event-id (first event-vec)
-        {:keys [interceptors event-type] :as registered-event} (event-id @events)
-        all-interceptors (concat [do-fx-interceptor
-                                  (prime-cofx-interceptor event-vec)]
-                                 interceptors)]
-
-    (when-not registered-event
-      (throw (Exception. (str "Event not found: " event-id))))
-
-    (->> (await (interceptors-sweep-before event-type event-vec all-interceptors))
-         (interceptors-sweep-after all-interceptors))))
-
-(defn ^:deprecated dispatch-sync
-  "DEPRECATED - Use (await (rd/dispatch [:event-id])) instead
+(defn dispatch-sync
+  "Use with await for example (await (dispatch-sync [:some-thing]))
 
   Synchronously (immediately) process `event`. It does **not** queue
   the event for handling later as `dispatch` does.
@@ -461,9 +473,9 @@
       (dispatch-sync [:sing :falsetto \"piano accordion\"])
   "
   [event-vec]
-  (await (do-dispatch event-vec)))
+  (do-dispatch event-vec))
 
-(defn ^:async dispatch
+(defn dispatch
   "Queue `event` for processing (handling).
 
   `event` is a vector and the first element is a keyword
@@ -478,7 +490,7 @@
       (dispatch [:order \"pizza\" {:supreme 2 :meatlovers 1 :veg 1}])
   "
   [event-vec]
-  (do-dispatch event-vec))
+  (.add events-queue event-vec))
 
 (defn register-defaults!
   "Optional default registrations for convenience"

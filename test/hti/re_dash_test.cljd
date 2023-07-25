@@ -30,8 +30,8 @@
 
 (deftest build-sub-map-test
 
-  (await (rd/dispatch [:re-dash/initialize-db
-                       {:foo {:bar 42} :baz 9001}]))
+  (await (rd/dispatch-sync [:re-dash/initialize-db
+                            {:foo {:bar 42} :baz 9001}]))
 
   (testing "Explicit input function"
     (let [dummy-state (atom nil)
@@ -219,7 +219,7 @@
       (let [current-count (inc (:current-count db 0))]
         (assoc db :current-count current-count))))
 
-  (await (rd/dispatch [:count]))
+  (await (rd/dispatch-sync [:count]))
 
   (is (= 1
          @(rd-testing/subscribe [:get-count]))))
@@ -232,7 +232,7 @@
       (let [current-count (inc (:current-count db 0))]
         {:db (assoc db :current-count current-count)})))
 
-  (await (rd/dispatch [:count]))
+  (await (rd/dispatch-sync [:count]))
 
   (is (= 1
          @(rd-testing/subscribe [:get-count]))))
@@ -251,7 +251,7 @@
       (let [current-count (+ (:current-count db 0) add-val)]
         {:db (assoc db :current-count current-count)})))
 
-  (await (rd/dispatch [:count]))
+  (await (rd/dispatch-sync [:count]))
 
   (is (= 5
          @(rd-testing/subscribe [:get-count]))))
@@ -271,7 +271,7 @@
       (let [current-count (+ (:current-count db 0) add-val)]
         {:db (assoc db :current-count current-count)})))
 
-  (await (rd/dispatch [:count]))
+  (await (rd/dispatch-sync [:count]))
 
   (is (= 5
          @(rd-testing/subscribe [:get-count]))))
@@ -286,7 +286,7 @@
     (fn [{db :db ::keys [hoge fuga] :as _cofx} _]
       {:db (assoc db :hogefuga-sum (+ hoge fuga))}))
 
-  (await (rd/dispatch [:hogefuga-adder]))
+  (await (rd/dispatch-sync [:hogefuga-adder]))
 
   (rd/reg-sub
     :hogefuga-sum
@@ -298,8 +298,8 @@
 
   (let [path [:path :to :current]]
 
-    (await (rd/dispatch [:re-dash/initialize-db
-                         {:path {:to {:current {:count 4}}}}]))
+    (await (rd/dispatch-sync [:re-dash/initialize-db
+                              {:path {:to {:current {:count 4}}}}]))
 
     (rd/reg-event-fx
       :count-path
@@ -313,7 +313,7 @@
       (fn [db _]
         (get-in db path)))
 
-    (await (rd/dispatch [:count-path]))
+    (await (rd/dispatch-sync [:count-path]))
 
     (is (= {:count 5}
            @(rd-testing/subscribe [:get-count-path])))))
