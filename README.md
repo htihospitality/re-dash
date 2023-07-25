@@ -277,7 +277,16 @@ Normally subscriptions are not able to be de-referenced outside a reactive conte
 
 Use `hti.re-dash-testing/subscribe` instead inside your tests if you need to assert a subscription's value (only [layer 2 - extractors](https://day8.github.io/re-frame/subscriptions/#the-four-layers) currently supported)
 
-## Other Features
+### Events
+
+When dispatching events from tests and you need to assert that `app-db` contains the expected updated state with a subscription, use
+
+```
+(await (dispatch-sync [:some-event-id]))
+```
+see the `hti.re-dash-test` namespace for example usage
+
+## Extra Features
 
 ### reg-sub-as-cofx
 
