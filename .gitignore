@@ -80,3 +80,11 @@
 /samples/local_storage/test/
 /samples/local_storage/web/
 /samples/local_storage/windows/
+/samples/event_queue/.clojuredart/
+/samples/event_queue/android/
+/samples/event_queue/ios/
+/samples/event_queue/lib/cljd-out/
+/samples/event_queue/linux/
+/samples/event_queue/macos/
+/samples/event_queue/web/
+/samples/event_queue/windows/

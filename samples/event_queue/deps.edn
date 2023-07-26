@@ -1,0 +1,9 @@
+{:paths ["src" "../../src"]
+ :deps {tensegritics/clojuredart
+        {:git/url "https://github.com/tensegritics/ClojureDart.git"
+         :sha "f2709454569ca0bc7f666f475fb09293fbb1eb31"}
+        ;; net.clojars.htihospitality/re-dash {:mvn/version "0.5.0"}
+        }
+ :aliases {:cljd {:main-opts ["-m" "cljd.build"]}}
+ :cljd/opts {:kind :flutter
+             :main acme.main}}

@@ -228,17 +228,17 @@
     (condp = effect-id
 
       :dispatch
-      (do-dispatch (:dispatch effects))
+      (.add events-queue (:dispatch effects))
 
       :dispatch-later
       (let [{:keys [ms dispatch]} (:dispatch-later effects)]
         (da/Future.delayed (Duration .milliseconds ms)
-                           #(do-dispatch dispatch)))
+                           #(.add events-queue dispatch)))
 
       :fx
       (doseq [[effect-id effect] (:fx effects)]
         (if (#{:dispatch :dispatch-later} effect-id)
-          (do-dispatch effect)
+          (.add events-queue effect)
           (execute! effect-id effect)))
 
       :deregister-event-handler

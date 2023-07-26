@@ -1,0 +1,35 @@
+(ns acme.model
+  (:require [hti.re-dash :as rd]))
+
+(defn do-something-for-while
+  []
+  (dotimes [_x (rand-int 100000000)]))
+
+(defn register!
+  []
+
+  (rd/reg-event-fx
+   ::count-one
+   (fn [{:keys [db]} _]
+     (let [current-count (inc (:current-count db 0))]
+       (do-something-for-while)
+       {:db (assoc db :current-count current-count)
+        ::log-count current-count})))
+
+  (rd/reg-event-fx
+   ::count-three
+   (fn [_ _]
+     {:fx [[:dispatch [::count-one]]
+           [:dispatch [::count-one]]
+           [:dispatch [::count-one]]]}))
+
+  (rd/reg-sub
+   ::get-count
+   (fn [db _]
+     (:current-count db)))
+
+  (rd/reg-fx
+   ::log-count
+   (fn [current-count]
+     (do-something-for-while)
+     (println (str "The current-count is " current-count)))))
