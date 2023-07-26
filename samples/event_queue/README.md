@@ -1,4 +1,4 @@
-# counter
+# event-queue
 
 Shows an example of [ordered event execution](https://day8.github.io/re-frame/api-builtin-effects/#dispatch)
 
