@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.6.0 - 2023-07-26
+### Changes
+- Added an event queue to ensure [ordered event execution](https://day8.github.io/re-frame/api-builtin-effects/#dispatch) - FIFO
+- Added a sample demonstrating ordered event execution
+- Added support for `nil`s in `:fx` sequence
+
 ## 0.5.0 - 2023-07-24
 ### Changes
 - Added [reg-sub-as-cofx](https://github.com/htihospitality/re-dash#reg-sub-as-cofx) to be able to inject a subscription into an event handler
