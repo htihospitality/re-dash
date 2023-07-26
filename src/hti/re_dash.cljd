@@ -236,7 +236,7 @@
                            #(.add events-queue dispatch)))
 
       :fx
-      (doseq [[effect-id effect] (:fx effects)]
+      (doseq [[effect-id effect] (->> effects :fx (remove nil?))]
         (if (#{:dispatch :dispatch-later} effect-id)
           (.add events-queue effect)
           (execute! effect-id effect)))

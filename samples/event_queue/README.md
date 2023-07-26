@@ -5,12 +5,12 @@ Shows an example of [ordered event execution](https://day8.github.io/re-frame/ap
 Multiple consecutive dispatches, each incrementing a counter in app-db:
 
 ```
-(rd/dispatch [::model/count-one])
-(rd/dispatch [::model/count-three])
-(rd/dispatch [::model/count-one])
-(rd/dispatch [::model/count-three])
-(rd/dispatch [::model/count-one])
-(rd/dispatch [::model/count-one])
+(dispatch [::model/count-one])
+(dispatch [::model/count-three])
+(dispatch [::model/count-one])
+(dispatch [::model/count-three])
+(dispatch [::model/count-one])
+(dispatch [::model/count-one])
 ```
 
 Resulting in an ordered output of `println` effects:
