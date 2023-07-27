@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.1 - 2023-07-27
+### Changes
+- Fixed dynamic warnings
+
 ## 0.6.0 - 2023-07-26
 ### Changes
 - Added an event queue to ensure [ordered event execution](https://day8.github.io/re-frame/api-builtin-effects/#dispatch) - FIFO

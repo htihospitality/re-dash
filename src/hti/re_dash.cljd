@@ -228,17 +228,17 @@
     (condp = effect-id
 
       :dispatch
-      (.add events-queue (:dispatch effects))
+      (.add ^da/StreamController events-queue (:dispatch effects))
 
       :dispatch-later
       (let [{:keys [ms dispatch]} (:dispatch-later effects)]
         (da/Future.delayed (Duration .milliseconds ms)
-                           #(.add events-queue dispatch)))
+                           #(.add ^da/StreamController events-queue dispatch)))
 
       :fx
       (doseq [[effect-id effect] (->> effects :fx (remove nil?))]
         (if (#{:dispatch :dispatch-later} effect-id)
-          (.add events-queue effect)
+          (.add ^da/StreamController events-queue effect)
           (execute! effect-id effect)))
 
       :deregister-event-handler
@@ -490,7 +490,7 @@
       (dispatch [:order \"pizza\" {:supreme 2 :meatlovers 1 :veg 1}])
   "
   [event-vec]
-  (.add events-queue event-vec))
+  (.add ^da/StreamController events-queue event-vec))
 
 (defn register-defaults!
   "Optional default registrations for convenience"
