@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.6.2 - 2023-08-29
+### Changes
+- Fixed issue with multiple input signals [Issue 19](https://github.com/htihospitality/re-dash/issues/19)
+
 ## 0.6.1 - 2023-07-27
 ### Changes
 - Fixed dynamic warnings
