@@ -208,6 +208,22 @@
                      (list :<- [::hoge] :<- [::fuga] :invalid> (fn [_ _]))))
           "Raises on unknown syntax sugar"))))
 
+(deftest subscribe-multiple-inputs
+  (rd/reg-sub
+   :a
+   (constantly "a"))
+
+  (rd/reg-sub
+   :b
+   (constantly "b"))
+
+  (rd/reg-sub
+   :ab
+   :<- [:a]
+   :<- [:b]
+   :-> (fn [[a b]] (str a b)))
+
+  (is (= "ab" @(rd-testing/subscribe [:ab]))))
 
 ;; Events
 
