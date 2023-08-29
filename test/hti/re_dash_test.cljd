@@ -221,7 +221,7 @@
    :ab
    :<- [:a]
    :<- [:b]
-   :-> #(str %1 %2))
+   :-> (fn [[a b]] (str a b)))
 
   (is (= "ab" @(rd-testing/subscribe [:ab]))))
 

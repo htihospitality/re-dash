@@ -137,8 +137,8 @@
             (if (and (every? #{:<-} sugars) (every? vector? signals))
               (fn [sub-fn]
                 (fn input-fn
-                  ([_] (map sub-fn signals))
-                  ([_ _] (map sub-fn signals))))
+                  ([_] (mapv sub-fn signals))
+                  ([_ _] (mapv sub-fn signals))))
               (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args))))))]
     {:signal-builder signal-builder
      :computation-fn computation-fn}))
