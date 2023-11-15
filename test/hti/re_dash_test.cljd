@@ -1,5 +1,6 @@
 (ns hti.re-dash-test
-  (:require [clojure.test :refer [deftest is testing use-fixtures]]
+  (:require ["dart:async" :as da]
+            [clojure.test :refer [deftest is testing use-fixtures]]
             [cljd.flutter :as f]
             [hti.re-dash :as rd]
             [hti.re-dash-testing :as rd-testing]))
@@ -333,3 +334,40 @@
 
     (is (= {:count 5}
            @(rd-testing/subscribe [:get-count-path])))))
+
+(deftest dispatch-multiple-events-incl-cofx-check-state
+
+  (testing "Ordered event queue execution including coeffects. See Github issue: 21"
+
+    (rd/reg-cofx
+      :add-val
+      (fn [cofx _]
+        (assoc cofx :add-val 5)))
+
+    (rd/reg-event-fx
+      :count
+      [(rd/inject-cofx :add-val)]                  ;; <== The test
+      (fn [{:keys [db add-val]} _]
+        (let [current-count (+ (:current-count db 0) add-val)]
+          {:db (assoc db :current-count current-count)})))
+
+    (rd/reg-event-fx
+      :count-another
+      [(rd/inject-cofx :add-val)]                  ;; <== The test
+      (fn [{:keys [db add-val]} _]
+        (let [current-count (+ (:current-count db 0) add-val)]
+          {:db (assoc db :current-count current-count)})))
+
+    (rd/reg-event-fx
+      :do-counts
+      (fn [_ _]
+        {:fx [[:dispatch [:count]]
+              [:dispatch [:count-another]]]}))
+
+    (rd/dispatch [:do-counts])
+
+    (testing "End result in app-db should be 10 (both Coeffects adding 5)"
+
+      (da/Future.delayed (Duration .milliseconds 1000)
+                         #(is (= 10
+                                 @(rd-testing/subscribe [:get-count])))))))
