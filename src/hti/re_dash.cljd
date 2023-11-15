@@ -1,6 +1,7 @@
 (ns hti.re-dash
   (:require [cljd.flutter :as f]
-            ["dart:async" :as da]))
+            ["dart:async" :as da]
+            ["dart:collection" :as coll]))
 
 
 ;; Database
@@ -228,17 +229,17 @@
     (condp = effect-id
 
       :dispatch
-      (.add ^da/StreamController events-queue (:dispatch effects))
+      (enqueue (:dispatch effects))
 
       :dispatch-later
       (let [{:keys [ms dispatch]} (:dispatch-later effects)]
         (da/Future.delayed (Duration .milliseconds ms)
-                           #(.add ^da/StreamController events-queue dispatch)))
+                           #(enqueue dispatch)))
 
       :fx
       (doseq [[effect-id effect] (->> effects :fx (remove nil?))]
         (if (#{:dispatch :dispatch-later} effect-id)
-          (.add ^da/StreamController events-queue effect)
+          (enqueue effect)
           (execute! effect-id effect)))
 
       :deregister-event-handler
@@ -323,28 +324,55 @@
 
 ;; Events Queue
 
+(defonce ^:private ^coll/Queue events-queue
+  (coll/Queue))
+
+(defonce ^:private processing? (atom false))
+
+(defn- dequeue
+  "If the queue is not empty, take the first event off the queue"
+  []
+  (when (.-isNotEmpty events-queue)
+    (.removeFirst events-queue)))
+
 (defn- do-dispatch
+  "Process this event, then the next in the queue, until the queue is empty."
   [event-vec]
-  (let [event-id (first event-vec)
-        {:keys [interceptors event-type] :as registered-event} (event-id @events)
-        all-interceptors (concat [do-fx-interceptor
-                                  (prime-cofx-interceptor event-vec)]
-                                 interceptors)]
+  (try
+    (let [event-id                                               (first event-vec)
+          {:keys [interceptors event-type] :as registered-event} (event-id @events)
+          all-interceptors                                       (concat [do-fx-interceptor
+                                    (prime-cofx-interceptor event-vec)]
+                                   interceptors)]
 
-    (when-not registered-event
-      (throw (Exception. (str "Event not found: " event-id))))
+      (when-not registered-event
+        (throw (Exception. (str "Event not found: " event-id))))
 
-    (->> (await (interceptors-sweep-before event-type event-vec all-interceptors))
-         (interceptors-sweep-after all-interceptors))))
+      (->> (interceptors-sweep-before event-type event-vec all-interceptors)
+           await
+           (interceptors-sweep-after all-interceptors)
+           await)
 
-(defonce ^:private events-queue
-  (let [controller (da/StreamController)]
+      (if-let [next-event-vec (dequeue)]
+        (do-dispatch next-event-vec)
+        (reset! processing? false)))
 
-    (.listen (.-stream controller)
-             (fn [event-vec]
-               (await (do-dispatch event-vec))))
+    (catch dynamic e
+      (reset! processing? false)
+      (throw e))))
 
-    controller))
+(defn- trigger
+  "Trigger do-dispatch if no event is busy processing"
+  []
+  (when (not @processing?)
+    (reset! processing? true)
+    (-> (dequeue) do-dispatch)))
+
+(defn- enqueue
+  "Adds this event to the queue and trigger do-dispatch"
+  [event-vec]
+  (.add ^coll/Queue events-queue event-vec)
+  (trigger))
 
 
 ;; Events
@@ -490,7 +518,7 @@
       (dispatch [:order \"pizza\" {:supreme 2 :meatlovers 1 :veg 1}])
   "
   [event-vec]
-  (.add ^da/StreamController events-queue event-vec))
+  (enqueue event-vec))
 
 (defn register-defaults!
   "Optional default registrations for convenience"
