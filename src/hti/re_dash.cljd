@@ -338,6 +338,13 @@
 (defn- do-dispatch
   "Process this event, then the next in the queue, until the queue is empty."
   [event-vec]
+
+  ;; Ensure we do not allow concurrent event execution.
+  ;; We open the gate again later after either
+  ;; - All events on the queue have been processed
+  ;; - Or an exception occurred
+  (reset! processing? true)
+
   (try
     (let [event-id                                               (first event-vec)
           {:keys [interceptors event-type] :as registered-event} (event-id @events)
@@ -365,11 +372,12 @@
   "Trigger do-dispatch if no event is busy processing"
   []
   (when (not @processing?)
-    (reset! processing? true)
     (-> (dequeue) do-dispatch)))
 
 (defn- enqueue
-  "Adds this event to the queue and trigger do-dispatch"
+  "Adds this event to the queue and trigger a do-dispatch.
+  Happens asynchronously so as to not hold up the event loop
+  and cause UI stutter"
   [event-vec]
   (.add ^coll/Queue events-queue event-vec)
   (trigger))
