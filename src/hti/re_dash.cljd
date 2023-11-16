@@ -1,5 +1,6 @@
 (ns hti.re-dash
   (:require [cljd.flutter :as f]
+            [clojure.string :as string]
             ["dart:async" :as da]
             ["dart:collection" :as coll]))
 
@@ -335,6 +336,12 @@
   (when (.-isNotEmpty events-queue)
     (.removeFirst events-queue)))
 
+(defn- print-ex
+  "Prints an exception including stack trace to the console"
+  [e st]
+  (dart:core/print
+    (string/join "\r\n" [e st])))
+
 (defn- do-dispatch
   "Process this event, then the next in the queue, until the queue is empty."
   [event-vec]
@@ -346,11 +353,15 @@
   (reset! processing? true)
 
   (try
-    (let [event-id                                               (first event-vec)
-          {:keys [interceptors event-type] :as registered-event} (event-id @events)
-          all-interceptors                                       (concat [do-fx-interceptor
-                                    (prime-cofx-interceptor event-vec)]
-                                   interceptors)]
+    (let [event-id (first event-vec)
+
+          {:keys [interceptors event-type] :as registered-event}
+          (event-id @events)
+
+          all-interceptors
+          (concat [do-fx-interceptor
+                   (prime-cofx-interceptor event-vec)]
+                  interceptors)]
 
       (when-not registered-event
         (throw (Exception. (str "Event not found: " event-id))))
@@ -364,9 +375,11 @@
         (do-dispatch next-event-vec)
         (reset! processing? false)))
 
-    (catch dynamic e
-      (reset! processing? false)
-      (throw e))))
+    (catch dynamic e st
+           (print-ex e st)
+           (if-let [next-event-vec (dequeue)]
+             (do-dispatch next-event-vec)
+             (reset! processing? false)))))
 
 (defn- trigger
   "Trigger do-dispatch if no event is busy processing"

@@ -344,6 +344,12 @@
       (fn [cofx _]
         (assoc cofx :add-val 5)))
 
+    (rd/reg-cofx
+    :add-val-future
+    (fn [cofx _]
+      (assoc cofx :add-val (await (Future.delayed (Duration .milliseconds 1)
+                                                  (constantly 5))))))
+
     (rd/reg-event-fx
       :count
       [(rd/inject-cofx :add-val)]                  ;; <== The test
@@ -353,7 +359,7 @@
 
     (rd/reg-event-fx
       :count-another
-      [(rd/inject-cofx :add-val)]                  ;; <== The test
+      [(rd/inject-cofx :add-val-future)]           ;; <== The test
       (fn [{:keys [db add-val]} _]
         (let [current-count (+ (:current-count db 0) add-val)]
           {:db (assoc db :current-count current-count)})))
@@ -370,4 +376,37 @@
 
       (da/Future.delayed (Duration .milliseconds 1000)
                          #(is (= 10
+                                 @(rd-testing/subscribe [:get-count])))))))
+
+(deftest dispatch-multiple-events-in-queue-one-exception
+
+  (testing "Ordered event queue execution including coeffects. See Github issue: 21"
+
+    (rd/reg-event-fx
+      :count
+      (fn [{:keys [db]} _]
+        (let [current-count (inc (:current-count db 0))]
+          {:db (assoc db :current-count current-count)})))
+
+    (rd/reg-event-fx
+      :exception
+      (fn [_ _]
+        (throw (Exception. "This exception is part of a test case, and can be safely ignored."))))
+
+    (rd/reg-event-fx
+      :do-counts
+      (fn [_ _]
+        {:fx [[:dispatch [:count]]
+              [:dispatch [:count]]
+              [:dispatch [:count]]
+              [:dispatch [:exception]]
+              [:dispatch [:count]]
+              [:dispatch [:count]]]}))
+
+    (rd/dispatch [:do-counts])
+
+    (testing "End result in app-db should be 5"
+
+      (da/Future.delayed (Duration .milliseconds 1000)
+                         #(is (= 5
                                  @(rd-testing/subscribe [:get-count])))))))
