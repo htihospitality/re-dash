@@ -1,6 +1,8 @@
 (ns hti.re-dash
   (:require [cljd.flutter :as f]
-            ["dart:async" :as da]))
+            [clojure.string :as string]
+            ["dart:async" :as da]
+            ["dart:collection" :as coll]))
 
 
 ;; Database
@@ -228,17 +230,17 @@
     (condp = effect-id
 
       :dispatch
-      (.add ^da/StreamController events-queue (:dispatch effects))
+      (enqueue (:dispatch effects))
 
       :dispatch-later
       (let [{:keys [ms dispatch]} (:dispatch-later effects)]
         (da/Future.delayed (Duration .milliseconds ms)
-                           #(.add ^da/StreamController events-queue dispatch)))
+                           #(enqueue dispatch)))
 
       :fx
       (doseq [[effect-id effect] (->> effects :fx (remove nil?))]
         (if (#{:dispatch :dispatch-later} effect-id)
-          (.add ^da/StreamController events-queue effect)
+          (enqueue effect)
           (execute! effect-id effect)))
 
       :deregister-event-handler
@@ -323,28 +325,74 @@
 
 ;; Events Queue
 
+(defonce ^:private ^coll/Queue events-queue
+  (coll/Queue))
+
+(defonce ^:private processing? (atom false))
+
+(defn- dequeue
+  "If the queue is not empty, take the first event off the queue"
+  []
+  (when (.-isNotEmpty events-queue)
+    (.removeFirst events-queue)))
+
+(defn- print-ex
+  "Prints an exception including stack trace to the console"
+  [e st]
+  (dart:core/print
+    (string/join "\r\n" [e st])))
+
 (defn- do-dispatch
+  "Process this event, then the next in the queue, until the queue is empty."
   [event-vec]
-  (let [event-id (first event-vec)
-        {:keys [interceptors event-type] :as registered-event} (event-id @events)
-        all-interceptors (concat [do-fx-interceptor
-                                  (prime-cofx-interceptor event-vec)]
-                                 interceptors)]
 
-    (when-not registered-event
-      (throw (Exception. (str "Event not found: " event-id))))
+  ;; Ensure we do not allow concurrent event execution.
+  ;; We open the gate again later after all events on the queue have been processed.
+  ;; In case of an exception, we'll log it to console and continue processing the remaining queue.
+  (reset! processing? true)
 
-    (->> (await (interceptors-sweep-before event-type event-vec all-interceptors))
-         (interceptors-sweep-after all-interceptors))))
+  (try
+    (let [event-id (first event-vec)
 
-(defonce ^:private events-queue
-  (let [controller (da/StreamController)]
+          {:keys [interceptors event-type] :as registered-event}
+          (event-id @events)
 
-    (.listen (.-stream controller)
-             (fn [event-vec]
-               (await (do-dispatch event-vec))))
+          all-interceptors
+          (concat [do-fx-interceptor
+                   (prime-cofx-interceptor event-vec)]
+                  interceptors)]
 
-    controller))
+      (when-not registered-event
+        (throw (Exception. (str "Event not found: " event-id))))
+
+      (->> (interceptors-sweep-before event-type event-vec all-interceptors)
+           await
+           (interceptors-sweep-after all-interceptors)
+           await)
+
+      (if-let [next-event-vec (dequeue)]
+        (do-dispatch next-event-vec)
+        (reset! processing? false)))
+
+    (catch dynamic e st
+           (print-ex e st)
+           (if-let [next-event-vec (dequeue)]
+             (do-dispatch next-event-vec)
+             (reset! processing? false)))))
+
+(defn- trigger
+  "Trigger do-dispatch if no event is busy processing"
+  []
+  (when (not @processing?)
+    (-> (dequeue) do-dispatch)))
+
+(defn- enqueue
+  "Adds this event to the queue and trigger a do-dispatch.
+  Happens asynchronously so as to not hold up the event loop
+  and cause UI stutter"
+  [event-vec]
+  (.add ^coll/Queue events-queue event-vec)
+  (trigger))
 
 
 ;; Events
@@ -490,7 +538,7 @@
       (dispatch [:order \"pizza\" {:supreme 2 :meatlovers 1 :veg 1}])
   "
   [event-vec]
-  (.add ^da/StreamController events-queue event-vec))
+  (enqueue event-vec))
 
 (defn register-defaults!
   "Optional default registrations for convenience"
