@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.7.0 - 2023-11-16
+### Changes
+- Implemented an improved events queue based on Dart's Queue [PR 22](https://github.com/htihospitality/re-dash/pull/22)
+
 ## 0.6.2 - 2023-08-29
 ### Changes
 - Fixed issue with multiple input signals [Issue 19](https://github.com/htihospitality/re-dash/issues/19)
