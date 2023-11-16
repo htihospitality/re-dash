@@ -347,9 +347,8 @@
   [event-vec]
 
   ;; Ensure we do not allow concurrent event execution.
-  ;; We open the gate again later after either
-  ;; - All events on the queue have been processed
-  ;; - Or an exception occurred
+  ;; We open the gate again later after all events on the queue have been processed.
+  ;; In case of an exception, we'll log it to console and continue processing the remaining queue.
   (reset! processing? true)
 
   (try
