@@ -63,7 +63,8 @@ Providing an options map we can add / remove some logging detail:
 - `:stats?` Default `false`. Include basic timed statistics for the event execution.
 - `:target` Default `:target/console`. Logging target, one of
   - `:target/console`   - Standard out
-  - `:target/dev-tools` - [Experimental] Flutter [DevTools logging view](https://docs.flutter.dev/tools/devtools/logging) (with Kind `re-dash`)
+  - `:target/dev-tools` - (Experimental) Flutter [DevTools logging view](https://docs.flutter.dev/tools/devtools/logging), with Kind `re-dash`
+  - `:target/everywhere` - Log to both console and Flutter DevTools (experimental)
 
 With all the options enabled:
 
