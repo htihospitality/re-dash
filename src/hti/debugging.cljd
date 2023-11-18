@@ -1,0 +1,110 @@
+(ns hti.debugging
+  (:require ["dart:developer" :as dev]
+            ["dart:convert" :as c]
+            [clojure.data :as data]
+            [clojure.string :as string]
+            [hti.interceptors :as interceptors]))
+
+
+(defn- log-console!
+  [{:keys [event-id started finished duration event-args diff
+           diff? stats? args?]
+    :or   {diff?  true
+           stats? false
+           args?  false}}]
+
+  (dart:core/print
+
+    (if (or diff? stats? args?)
+
+      (->>  (concat
+              ["\r\n"
+               "###############################################"
+               (str "### Event: " event-id)]
+              (when stats?
+                [(str "### Started  : " started)
+                 (str "### Finished : " finished)
+                 (str "### Duration : " duration)])
+              (when args?
+                ["-----------------------------------------------"
+                 "### Event Args:"
+                 event-args])
+              (when diff?
+                ["-----------------------------------------------"
+                 "### DB Diff Before (Removed):"
+                 (or (first diff) {})
+                 "-----------------------------------------------"
+                 "### DB Diff After (Added):"
+                 (or (second diff) {})])
+              ["###############################################"
+               "\r\n"])
+            flatten
+            (remove nil?)
+            (string/join "\r\n"))
+
+      (str "Event: " event-id))))
+
+
+(defn- log-dev-tools!
+  [{:keys [event-id diff event-args started finished duration
+           diff? stats? args?]
+    :or   {diff?  true
+           stats? false
+           args?  false}}]
+
+  (dev/log (str "Event: " event-id)
+           .name "re-dash"
+           .error (cond-> {}
+                    diff?  (assoc :db {:before (or (first diff) {})
+                                       :after  (or (second diff) {})})
+                    args?  (assoc :args event-args)
+                    stats? (assoc :stats {:started  started
+                                          :finished finished
+                                          :duration duration}))))
+
+
+(defn debug
+  [{:keys [target]
+    :or   {target :debug/console}
+    :as   options}]
+
+  (interceptors/->interceptor
+
+    :re-dash/debug
+
+    (fn before [context]
+      (assoc context :debug {:started (DateTime/now)
+                             :db      (-> context :coeffects :db)}))
+
+    (fn after [context]
+      (let [event-id   (-> context :coeffects :event first)
+            event-args (-> context :coeffects :event rest)
+            started    (-> context :debug :started)
+            finished   (DateTime/now)
+            duration   (.difference finished started)
+            db-before  (-> context :debug :db)
+            db-after   (-> context :effects :db)
+            diff       (when db-after
+                         (data/diff db-before db-after))
+            log-args   (merge
+                         {:event-id   event-id
+                          :started    started
+                          :finished   finished
+                          :duration   duration
+                          :event-args event-args
+                          :diff       diff}
+                         options)]
+
+        (condp = target
+
+          :target/console
+          (log-console! log-args)
+
+          :target/dev-tools
+          (log-dev-tools! log-args)
+
+          :target/everywhere
+          (do (log-console! log-args)
+              (log-dev-tools! log-args))))
+
+      context)))

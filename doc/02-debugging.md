@@ -56,11 +56,14 @@ Taking inspiration from [re-frame](https://github.com/Day8/re-frame/blob/master/
 
 Providing an options map we can add / remove some logging detail:
 
-- `:args?` Include the arguments passed to the event when it was dispatched. Default `false`
-- `:diff?` Include the 1st two elements from the `clojure.data/diff` tuple. Default `true`
+- `:args?` Default `false`. Include the arguments passed to the event when it was dispatched.
+- `:diff?` Default `true`.  Include the 1st two elements from the `clojure.data/diff` tuple.
   - The DB diff before the app db was updated (the data that's been removed/changed by the event)
   - The DB diff after the app db was updated (the data that's been added/changed by the event)
-- `stats?` Include basic timed statistics for the event execution. Default `false`
+- `:stats?` Default `false`. Include basic timed statistics for the event execution.
+- `:target` Default `:target/console`. Logging target, one of
+  - `:target/console`   - Standard out
+  - `:target/dev-tools` - [Experimental] Flutter [DevTools logging view](https://docs.flutter.dev/tools/devtools/logging) (with Kind `re-dash`)
 
 With all the options enabled:
 

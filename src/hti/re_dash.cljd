@@ -1,9 +1,11 @@
 (ns hti.re-dash
-  (:require [cljd.flutter :as f]
+  (:require ["dart:async" :as da]
+            ["dart:collection" :as coll]
+            [cljd.flutter :as f]
             [clojure.string :as string]
             [clojure.data :as data]
-            ["dart:async" :as da]
-            ["dart:collection" :as coll]))
+            [hti.debugging :as debugging]
+            [hti.interceptors :as interceptors]))
 
 
 ;; Database
@@ -289,9 +291,7 @@
   "Creates a new interceptor identified by the keywordized id
   and with nillable before and after functions"
   [id before after]
-  {:id     id
-   :before before
-   :after  after})
+  (interceptors/->interceptor id before after))
 
 (defn debug
   "Interceptor that logs debug information after event execution.
@@ -300,52 +300,8 @@
    - :stats? [Default false] Include timed statistics for event"
   ([]
    (debug {}))
-  ([{:keys [diff? stats? args?]
-     :or   {diff? true stats? false args? false}}]
-   (->interceptor :re-dash/debug
-
-                  (fn before [context]
-                    (assoc context :debug {:started (DateTime/now)
-                                           :db      (-> context :coeffects :db)}))
-
-                  (fn after [context]
-                    (let [event-id  (-> context :coeffects :event first)
-                          args      (-> context :coeffects :event rest)
-                          started   (-> context :debug :started)
-                          finished  (DateTime/now)
-                          duration  (.difference finished started)
-                          db-before (-> context :debug :db)
-                          db-after  (-> context :effects :db)
-                          diff      (when db-after
-                                      (data/diff db-before db-after))]
-                      (if (or diff? stats? args?)
-                        (->> (concat
-                               ["\r\n"
-                                "###############################################"
-                                (str "### Event: " event-id)]
-                               (when stats?
-                                 [(str "### Started  : " started)
-                                  (str "### Finished : " finished)
-                                  (str "### Duration : " duration)])
-                               (when args?
-                                 ["-----------------------------------------------"
-                                  "### Event Args:"
-                                  args])
-                               (when diff?
-                                 ["-----------------------------------------------"
-                                  "### DB Diff Before (Removed):"
-                                  (or (first diff) {})
-                                  "-----------------------------------------------"
-                                  "### DB Diff After (Added):"
-                                  (or (second diff) {})])
-                               ["###############################################"
-                                "\r\n"])
-                             flatten
-                             (remove nil?)
-                             (string/join "\r\n")
-                             dart:core/print)
-                        (dart:core/print (str "Event: " event-id))))
-                    context))))
+  ([options]
+   (debugging/debug options)))
 
 (def do-fx-interceptor
   (->interceptor :re-dash/do-fx
