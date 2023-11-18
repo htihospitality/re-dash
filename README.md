@@ -26,7 +26,7 @@ A [ClojureDart](https://github.com/Tensegritics/ClojureDart) framework, inspired
 
 [![cljdoc badge](https://cljdoc.org/badge/net.clojars.htihospitality/re-dash)](https://cljdoc.org/d/net.clojars.htihospitality/re-dash)
 
-Many (not all) of the concepts in [re-frame](http://day8.github.io/re-frame/re-frame/) has been made available in this library, and the aim is to share the same api as far as possible, so if you're familiar with re-frame, picking up re-dash should feel natural.
+Most (not all) of the concepts in [re-frame](http://day8.github.io/re-frame/re-frame/) has been made available in this library, and the aim is to share the same api as far as possible, so if you're familiar with re-frame, picking up re-dash should feel natural.
 
 To gain an understanding of the concepts in re-dash, head over to the excellent documentation in [re-frame](http://day8.github.io/re-frame/re-frame/)
 
@@ -262,6 +262,12 @@ and in the model
 ```
 
 This does come with a drawback, as whenever we make a change in the `model` name space, _hot reload_ does not pick up the changes, so a _hot restart_ is needed instead. Note this only affect our `model` name space, _hot reload_ works fine in our _view_. Maybe there is a way to keep our event registrations from being tree shaken, if so, we'd love to hear it!
+
+## Debugging
+
+To debug our event handlers, we can register [interceptors](/doc/01-interceptors.md) to automatically log when events fire, and how the app state db looked before and after the event.
+
+See: [debugging](/doc/02-debugging.md)
 
 ## Testing
 
