@@ -16,7 +16,7 @@ Inject coeffects into the `cofx` map that we can use inside our event handlers, 
 
 ### `path`
 
-An interceptor which acts somewhat like clojure.core/update-in, in the sense that the event handler is given a specific part of app-db to change, not all of app-db, see [path](https://day8.github.io/re-frame/api-re-frame.core/#path)
+An interceptor which acts somewhat like `clojure.core/update-in`, in the sense that the event handler is given a specific part of app-db to change, not all of app-db, see [path](https://day8.github.io/re-frame/api-re-frame.core/#path)
 
 ## Creating your own
 
