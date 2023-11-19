@@ -65,7 +65,7 @@
 
 (defn debug
   [{:keys [target]
-    :or   {target :debug/console}
+    :or   {target :target/console}
     :as   options}]
 
   (interceptors/->interceptor
