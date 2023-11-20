@@ -1,8 +1,11 @@
 (ns hti.re-dash
-  (:require [cljd.flutter :as f]
+  (:require ["dart:async" :as da]
+            ["dart:collection" :as coll]
+            [cljd.flutter :as f]
             [clojure.string :as string]
-            ["dart:async" :as da]
-            ["dart:collection" :as coll]))
+            [clojure.data :as data]
+            [hti.debugging :as debugging]
+            [hti.interceptors :as interceptors]))
 
 
 ;; Database
@@ -277,13 +280,33 @@
 
 ;; Interceptors
 
+(defonce ^:private global-interceptors (atom []))
+
+(defn reg-global-interceptor
+  "Registers an interceptor that will be automatically injected into all event handlers"
+  [interceptor]
+  (swap! global-interceptors conj interceptor))
+
 (defn ->interceptor
   "Creates a new interceptor identified by the keywordized id
   and with nillable before and after functions"
   [id before after]
-  {:id     id
-   :before before
-   :after  after})
+  (interceptors/->interceptor id before after))
+
+(defn debug
+  "Interceptor that logs debug information after event execution.
+  A map of options may be supplied:
+    - `:args?`  Default `false`. Include the arguments passed to the event when it was dispatched.
+    - `:diff?`  Default `true`.  Include the 1st two elements from the `clojure.data/diff` tuple applied on the db..
+    - `:stats?` Default `false`. Include basic timed statistics for the event execution.
+    - `:target` Default `:target/console`. Logging target, one of
+      - `:target/console`   - Standard out
+      - `:target/dev-tools` - (Experimental) Flutter [DevTools logging view](https://docs.flutter.dev/tools/devtools/logging), with Kind `re-dash`
+      - `:target/everywhere` - Log to both console and Flutter DevTools (experimental)"
+  ([]
+   (debug {}))
+  ([options]
+   (debugging/debug options)))
 
 (def do-fx-interceptor
   (->interceptor :re-dash/do-fx
@@ -360,6 +383,7 @@
           all-interceptors
           (concat [do-fx-interceptor
                    (prime-cofx-interceptor event-vec)]
+                  @global-interceptors
                   interceptors)]
 
       (when-not registered-event

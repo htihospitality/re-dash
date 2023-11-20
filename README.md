@@ -263,6 +263,12 @@ and in the model
 
 This does come with a drawback, as whenever we make a change in the `model` name space, _hot reload_ does not pick up the changes, so a _hot restart_ is needed instead. Note this only affect our `model` name space, _hot reload_ works fine in our _view_. Maybe there is a way to keep our event registrations from being tree shaken, if so, we'd love to hear it!
 
+## Debugging
+
+To debug our event handlers, we can register [interceptors](/doc/01-interceptors.md) to automatically log when events fire, and how the app state db looked before and after the event.
+
+See: [debugging](/doc/02-debugging.md)
+
 ## Testing
 
 re-dash comes with some utilities to help with writing tests

@@ -1,0 +1,7 @@
+(ns hti.interceptors)
+
+(defn ->interceptor
+  [id before after]
+  {:id     id
+   :before before
+   :after  after})
