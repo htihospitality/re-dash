@@ -1,5 +1,10 @@
 # Change Log
 
+## 0.8.0 - 2023-11-20
+### Changes
+- Added a `debug` interceptor to help with debugging event handlers, see [debugging](https://github.com/htihospitality/re-dash/blob/main/doc/02-debugging.md)
+- Added the ability to register [global interceptors](https://github.com/htihospitality/re-dash/blob/main/doc/01-interceptors.md#global-interceptors)
+
 ## 0.7.0 - 2023-11-16
 ### Changes
 - Implemented an improved events queue based on Dart's Queue [PR 22](https://github.com/htihospitality/re-dash/pull/22)
