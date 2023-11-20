@@ -296,8 +296,13 @@
 (defn debug
   "Interceptor that logs debug information after event execution.
   A map of options may be supplied:
-   - :diff?  [Default true]  Include a clojure.data/diff for the DB before & after (removed & added)
-   - :stats? [Default false] Include timed statistics for event"
+    - `:args?`  Default `false`. Include the arguments passed to the event when it was dispatched.
+    - `:diff?`  Default `true`.  Include the 1st two elements from the `clojure.data/diff` tuple applied on the db..
+    - `:stats?` Default `false`. Include basic timed statistics for the event execution.
+    - `:target` Default `:target/console`. Logging target, one of
+      - `:target/console`   - Standard out
+      - `:target/dev-tools` - (Experimental) Flutter [DevTools logging view](https://docs.flutter.dev/tools/devtools/logging), with Kind `re-dash`
+      - `:target/everywhere` - Log to both console and Flutter DevTools (experimental)"
   ([]
    (debug {}))
   ([options]

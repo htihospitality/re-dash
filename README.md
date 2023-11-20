@@ -26,7 +26,7 @@ A [ClojureDart](https://github.com/Tensegritics/ClojureDart) framework, inspired
 
 [![cljdoc badge](https://cljdoc.org/badge/net.clojars.htihospitality/re-dash)](https://cljdoc.org/d/net.clojars.htihospitality/re-dash)
 
-Most (not all) of the concepts in [re-frame](http://day8.github.io/re-frame/re-frame/) has been made available in this library, and the aim is to share the same api as far as possible, so if you're familiar with re-frame, picking up re-dash should feel natural.
+Many (not all) of the concepts in [re-frame](http://day8.github.io/re-frame/re-frame/) has been made available in this library, and the aim is to share the same api as far as possible, so if you're familiar with re-frame, picking up re-dash should feel natural.
 
 To gain an understanding of the concepts in re-dash, head over to the excellent documentation in [re-frame](http://day8.github.io/re-frame/re-frame/)
 
