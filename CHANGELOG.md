@@ -4,6 +4,8 @@
 ### Changes
 - Added a `debug` interceptor to help with debugging event handlers, see [debugging](https://github.com/htihospitality/re-dash/blob/main/doc/02-debugging.md)
 - Added the ability to register [global interceptors](https://github.com/htihospitality/re-dash/blob/main/doc/01-interceptors.md#global-interceptors)
+### Dependencies
+- ClojureDart SHA `684d6a47a2e85585a138540468fd0ad4ffa664aa` or later
 
 ## 0.7.0 - 2023-11-16
 ### Changes
