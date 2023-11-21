@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.8.1 - 2023-11-21
+### Changes
+- Added re-dash-testing namespace to deployed jar artifact
+
 ## 0.8.0 - 2023-11-20
 ### Changes
 - Added a `debug` interceptor to help with debugging event handlers, see [debugging](https://github.com/htihospitality/re-dash/blob/main/doc/02-debugging.md)
