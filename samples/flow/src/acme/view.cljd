@@ -30,4 +30,4 @@
        (m/Row
          .mainAxisAlignment m/MainAxisAlignment.center
          .children
-         [(m/Text (str "Area: " area))])])))
+         [(m/Text (str "Area (derived value from Flow): " area))])])))
