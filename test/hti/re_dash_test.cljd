@@ -226,6 +226,7 @@
 
   (is (= "ab" @(rd-testing/subscribe [:ab]))))
 
+
 ;; Events
 
 (deftest dispatch-event-db
@@ -415,27 +416,61 @@
 
 ;; Flows
 
-(def flow
-  {:id     :room-area
-   :inputs {:w [:room :width]
-            :h [:room :length]}
-   :output (fn calc-area [{:keys [w h]}]
-             (* w h))
-   :path   [:room :area]})
-
-
 (deftest flow-interceptor
 
-  (rd/reg-flow flow)
+  (let [flow-ran-count (atom 0)
+        flow           {:id     :room-area
+                        :inputs {:w [:room :width]
+                                 :h [:room :length]}
+                        :output (fn calc-area [{:keys [w h]}]
+                                  (swap! flow-ran-count inc)
+                                  ((fnil * 0 0) w h))
+                        :path   [:room :area]}]
 
-  (testing "output function puts derived result in path"
+    ;; Register subscriptions to the input parameters
+    (rd/reg-sub      ::width  (fn [db _] (get-in db [:room :width])))
+    (rd/reg-sub      ::length (fn [db _] (get-in db [:room :length])))
 
-    (let [db      {:room {:width  10
-                          :length 15}}
-          context {:effects {:db db}}
-          flow-fn (-> rd/flow-interceptor :before)]
+    ;; Subscribe to the Flow's output path
+    (rd/reg-sub      ::area   (fn [db _] (get-in db [:room :area])))
 
-      (is (= {:effects {:db {:room {:width  10
-                                    :length 15
-                                    :area   150}}}}
-             (flow-fn context))))))
+    (rd/reg-event-db ::inc-w  (fn [db _] (update-in db [:room :width] inc)))
+    (rd/reg-event-db ::inc-h  (fn [db _] (update-in db [:room :length] inc)))
+    (rd/reg-event-db ::inc-noop  (fn [db _] db))
+
+    (rd/reg-event-db ::init   (fn [db _] (update db :room merge {:width 10 :length 15})))
+
+    (await (rd/dispatch-sync [::init]))
+
+    (rd/reg-flow flow)
+
+
+
+    (testing "output function runs the first time as width changed"
+
+      (await (rd/dispatch-sync [::inc-w]))
+
+      (is (= 1 @flow-ran-count))
+      (is (= 11 @(rd-testing/subscribe [::width])))
+      (is (= 15 @(rd-testing/subscribe [::length])))
+      (is (= 165 @(rd-testing/subscribe [::area]))))
+
+
+    (testing "output function runs a second time as length changed"
+
+      (await (rd/dispatch-sync [::inc-h]))
+
+      (is (= 2 @flow-ran-count))
+      (is (= 11 @(rd-testing/subscribe [::width])))
+      (is (= 16 @(rd-testing/subscribe [::length])))
+      (is (= 176 @(rd-testing/subscribe [::area]))))
+
+
+    (testing "output function does NOT run a third time as both inputs remain unchanged"
+
+      (await (rd/dispatch-sync [::inc-noop]))
+
+      (is (= 2 @flow-ran-count))
+      (is (= 11 @(rd-testing/subscribe [::width])))
+      (is (= 16 @(rd-testing/subscribe [::length])))
+      (is (= 176 @(rd-testing/subscribe [::area]))))))
