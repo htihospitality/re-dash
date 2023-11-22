@@ -1,0 +1,26 @@
+(ns acme.model
+  (:require [hti.re-dash :as rd]))
+
+(defn register!
+  []
+
+  ;; Register the Flow to calculate the area when either width or length changes
+  (rd/reg-flow
+    {:id     :garage-area
+     :inputs {:w [:garage :width]
+              :h [:garage :length]}
+     :output (fn [{:keys [w h]}] (* w h))
+     :path   [:garage :area]})
+
+  ;; Register subscriptions to the input parameters
+  (rd/reg-sub      ::width  (fn [db [_ room]] (get-in db [room :width])))
+  (rd/reg-sub      ::length (fn [db [_ room]] (get-in db [room :length])))
+
+  ;; Subscribe to the Flow's output path
+  (rd/reg-sub      ::area   (fn [db [_ room]] (get-in db [room :area])))
+
+  (rd/reg-event-db ::inc-w  (fn [db [_ room]] (update-in db [room :width] inc)))
+  (rd/reg-event-db ::inc-h  (fn [db [_ room]] (update-in db [room :length] inc)))
+  (rd/reg-event-db ::init   (fn [db _]        (-> db
+                                                  (update :kitchen merge {:width 10 :length 15})
+                                                  (update :garage merge {:width 20 :length 20})))))

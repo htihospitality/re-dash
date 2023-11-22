@@ -410,3 +410,32 @@
       (da/Future.delayed (Duration .milliseconds 1000)
                          #(is (= 5
                                  @(rd-testing/subscribe [:get-count])))))))
+
+
+
+;; Flows
+
+(def flow
+  {:id     :room-area
+   :inputs {:w [:room :width]
+            :h [:room :length]}
+   :output (fn calc-area [{:keys [w h]}]
+             (* w h))
+   :path   [:room :area]})
+
+
+(deftest flow-interceptor
+
+  (rd/reg-flow flow)
+
+  (testing "output function puts derived result in path"
+
+    (let [db      {:room {:width  10
+                          :length 15}}
+          context {:effects {:db db}}
+          flow-fn (-> rd/flow-interceptor :before)]
+
+      (is (= {:effects {:db {:room {:width  10
+                                    :length 15
+                                    :area   150}}}}
+             (flow-fn context))))))

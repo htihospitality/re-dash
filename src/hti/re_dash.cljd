@@ -346,6 +346,44 @@
                    (update-in context [:effects :db]
                               #(assoc-in @app-db (flatten args) %)))))
 
+
+;; Flows
+
+(defonce ^:private flows (atom []))
+
+(defn reg-flow
+  ([flow]
+   (when-not (:id flow) (throw (ex-info ":id is mandatory" flow)))
+   (reg-flow (:id flow) flow))
+  ([flow-id flow]
+   (when-not flow-id (throw (ex-info "flow-id is mandatory" flow)))
+   (swap! flows conj (assoc flow :id flow-id))))
+
+(defn- resolve-inputs
+  [db inputs]
+  (->> (map (fn [[input-key input-path]]
+              {input-key (get-in db input-path)})
+            inputs)
+       (into {})))
+
+(def flow-interceptor
+  (interceptors/->interceptor
+    :re-dash/flow
+    (fn [{{db :db} :effects
+          :as      context}]
+      (assoc-in context [:effects :db]
+                (reduce (fn [new-db {:keys [inputs output path]}]
+                          (let [new-db-resolved-inputs (resolve-inputs new-db inputs)
+                                old-db-resolved-inputs (resolve-inputs @app-db inputs)]
+                            (if (not= new-db-resolved-inputs old-db-resolved-inputs)
+                              (assoc-in new-db path (output new-db-resolved-inputs))
+                              new-db)))
+                        db
+                        @flows)))
+    nil))
+
+
+
 ;; Events Queue
 
 (defonce ^:private ^coll/Queue events-queue
@@ -384,7 +422,8 @@
           (concat [do-fx-interceptor
                    (prime-cofx-interceptor event-vec)]
                   @global-interceptors
-                  interceptors)]
+                  interceptors
+                  [flow-interceptor])]
 
       (when-not registered-event
         (throw (Exception. (str "Event not found: " event-id))))

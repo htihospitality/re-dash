@@ -1,0 +1,33 @@
+(ns acme.view
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.model :as model]
+            [hti.re-dash :as rd]))
+
+(def garage-calculator
+  (f/widget
+    :watch [width (rd/subscribe [::model/width :garage])
+            length (rd/subscribe [::model/length :garage])
+            area (rd/subscribe [::model/area :garage])]
+    (m/Column
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .children
+      [(m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/Text (str "Width: " width))
+          (m/IconButton
+            .icon (m/Icon (m/Icons.add_circle_outline))
+            .onPressed #(rd/dispatch [::model/inc-w :garage]))])
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/Text (str "Length: " length))
+          (m/IconButton
+            .icon (m/Icon (m/Icons.add_circle_outline))
+            .onPressed #(rd/dispatch [::model/inc-h :garage]))])
+       (m/Divider)
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/Text (str "Area: " area))])])))
