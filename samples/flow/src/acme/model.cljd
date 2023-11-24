@@ -4,14 +4,6 @@
 (defn register!
   []
 
-  ;; Register the Flow to calculate the area when either width or length changes
-  (rd/reg-flow
-    {:id     :garage-area
-     :inputs {:w [:garage :width]
-              :h [:garage :length]}
-     :output (fn calc-area [{:keys [w h]}] (* w h))
-     :path   [:garage :area]})
-
   ;; Register subscriptions to the input parameters
   (rd/reg-sub      ::width  (fn [db [_ room]] (get-in db [room :width])))
   (rd/reg-sub      ::length (fn [db [_ room]] (get-in db [room :length])))

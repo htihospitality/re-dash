@@ -351,20 +351,13 @@
 
 (defonce ^:private flows (atom []))
 
-(defn reg-flow
-  ([flow]
-   (when-not (:id flow) (throw (ex-info ":id is mandatory" flow)))
-   (reg-flow (:id flow) flow))
-  ([flow-id flow]
-   (when-not flow-id (throw (ex-info "flow-id is mandatory" flow)))
-   (swap! flows conj (assoc flow :id flow-id))))
-
 (defn- resolve-inputs
   [db inputs]
   (->> (map (fn [[input-key input-path]]
               {input-key (get-in db input-path)})
             inputs)
        (into {})))
+
 
 (def flow-interceptor
   (interceptors/->interceptor
@@ -381,6 +374,40 @@
                         db
                         @flows)))
     nil))
+
+(defn- flows-match?
+  [flow1 flow2]
+  #(= (:id flow1) (:id flow2)))
+
+(defn- sort-flows
+  [new-flows]
+
+  ;; TODO - Dependency graph, see flow<-
+
+  new-flows)
+
+(defn reg-flow
+
+  ([flow]
+   (when-not (:id flow) (throw (ex-info ":id is mandatory" flow)))
+   (reg-flow (:id flow) flow))
+
+  ([flow-id {:keys [inputs output path] :as flow}]
+   (when-not flow-id (throw (ex-info "flow-id is mandatory" flow)))
+
+   (let [flow' (assoc flow :id flow-id)]
+
+     ;; Register the flow
+     (swap! flows
+            (fn [current-flows]
+              (-> (remove #(flows-match? flow' %) current-flows)
+                  (conj flow')
+                  sort-flows)))
+
+     ;; Run the flow for the first time
+     (swap! app-db
+            #(assoc-in % path
+                       (-> (resolve-inputs % inputs) output))))))
 
 
 

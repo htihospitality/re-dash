@@ -25,7 +25,28 @@
 
   ([_]))
 
-(use-fixtures :once default-subscriptions)
+(defn default-flow-handlers
+  ([]
+
+   ;; Register subscriptions to the flow input parameters
+   (rd/reg-sub      ::width  (fn [db [_ room]] (get-in db [room :width])))
+   (rd/reg-sub      ::length (fn [db [_ room]] (get-in db [room :length])))
+
+   ;; Subscribe to the Flow's output path
+   (rd/reg-sub      ::area   (fn [db [_ room]] (get-in db [room :area])))
+
+   (rd/reg-event-db ::inc-w  (fn [db [_ room]] (update-in db [room :width] inc)))
+   (rd/reg-event-db ::inc-h  (fn [db [_ room]] (update-in db [room :length] inc)))
+
+   (rd/reg-event-db ::inc-noop  (fn [db _] db))
+
+   (rd/reg-event-db ::init   (fn [db _] (-> db
+                                            (update :kitchen merge {:width 10 :length 15})
+                                            (update :garage merge {:width 20 :length 25})))))
+
+  ([_]))
+
+(use-fixtures :once default-subscriptions default-flow-handlers)
 
 (use-fixtures :each rd-testing/reset-app-db-fixture)
 
@@ -416,61 +437,67 @@
 
 ;; Flows
 
-(deftest flow-interceptor
+(deftest flow
 
   (let [flow-ran-count (atom 0)
-        flow           {:id     :room-area
-                        :inputs {:w [:room :width]
-                                 :h [:room :length]}
+        flow           {:id     :garage-area
+                        :inputs {:w [:garage :width]
+                                 :h [:garage :length]}
                         :output (fn calc-area [{:keys [w h]}]
                                   (swap! flow-ran-count inc)
                                   ((fnil * 0 0) w h))
-                        :path   [:room :area]}]
+                        :path   [:garage :area]}]
 
-    ;; Register subscriptions to the input parameters
-    (rd/reg-sub      ::width  (fn [db _] (get-in db [:room :width])))
-    (rd/reg-sub      ::length (fn [db _] (get-in db [:room :length])))
-
-    ;; Subscribe to the Flow's output path
-    (rd/reg-sub      ::area   (fn [db _] (get-in db [:room :area])))
-
-    (rd/reg-event-db ::inc-w  (fn [db _] (update-in db [:room :width] inc)))
-    (rd/reg-event-db ::inc-h  (fn [db _] (update-in db [:room :length] inc)))
-    (rd/reg-event-db ::inc-noop  (fn [db _] db))
-
-    (rd/reg-event-db ::init   (fn [db _] (update db :room merge {:width 10 :length 15})))
 
     (await (rd/dispatch-sync [::init]))
 
-    (rd/reg-flow flow)
 
+    (testing "flow registration runs the flow output function for the first time"
 
-
-    (testing "output function runs the first time as width changed"
-
-      (await (rd/dispatch-sync [::inc-w]))
+      (rd/reg-flow flow)
 
       (is (= 1 @flow-ran-count))
-      (is (= 11 @(rd-testing/subscribe [::width])))
-      (is (= 15 @(rd-testing/subscribe [::length])))
-      (is (= 165 @(rd-testing/subscribe [::area]))))
+      (is (= 20 @(rd-testing/subscribe [::width :garage])))
+      (is (= 25 @(rd-testing/subscribe [::length :garage])))
+      (is (= 500 @(rd-testing/subscribe [::area :garage]))))
 
 
-    (testing "output function runs a second time as length changed"
+    (testing "output function runs the second time as width changed"
 
-      (await (rd/dispatch-sync [::inc-h]))
+      (await (rd/dispatch-sync [::inc-w :garage]))
 
       (is (= 2 @flow-ran-count))
-      (is (= 11 @(rd-testing/subscribe [::width])))
-      (is (= 16 @(rd-testing/subscribe [::length])))
-      (is (= 176 @(rd-testing/subscribe [::area]))))
+      (is (= 21 @(rd-testing/subscribe [::width :garage])))
+      (is (= 25 @(rd-testing/subscribe [::length :garage])))
+      (is (= 525 @(rd-testing/subscribe [::area :garage])))      )
 
 
-    (testing "output function does NOT run a third time as both inputs remain unchanged"
+    (testing "output function runs a third time as length changed"
+
+      (await (rd/dispatch-sync [::inc-h :garage]))
+
+      (is (= 3 @flow-ran-count))
+      (is (= 21 @(rd-testing/subscribe [::width :garage])))
+      (is (= 26 @(rd-testing/subscribe [::length :garage])))
+      (is (= 546 @(rd-testing/subscribe [::area :garage]))))
+
+
+    (testing "output function does NOT run a fourth time as both inputs remain unchanged"
 
       (await (rd/dispatch-sync [::inc-noop]))
 
-      (is (= 2 @flow-ran-count))
-      (is (= 11 @(rd-testing/subscribe [::width])))
-      (is (= 16 @(rd-testing/subscribe [::length])))
-      (is (= 176 @(rd-testing/subscribe [::area]))))))
+      (is (= 3 @flow-ran-count))
+      (is (= 21 @(rd-testing/subscribe [::width :garage])))
+      (is (= 26 @(rd-testing/subscribe [::length :garage])))
+      (is (= 546 @(rd-testing/subscribe [::area :garage]))))
+
+
+    (testing "multiple registrations of the same flow does not duplicate them"
+
+      (rd/reg-flow flow)
+      (rd/reg-flow flow)
+      (rd/reg-flow flow)
+
+      (is (= 1
+             (-> (filter #(= (:id flow) (:id %)) @rd/flows)
+                 count))))))
