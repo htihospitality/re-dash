@@ -11,8 +11,8 @@
   ;; Subscribe to the Flow's output path
   (rd/reg-sub      ::area   (fn [db [_ room]] (get-in db [room :area])))
 
-  (rd/reg-event-db ::inc-w  (fn [db [_ room]] (update-in db [room :width] inc)))
-  (rd/reg-event-db ::inc-h  (fn [db [_ room]] (update-in db [room :length] inc)))
+  (rd/reg-event-db ::inc-w  (fn [db [_ room]] (update-in db [room :width] (fnil inc 0))))
+  (rd/reg-event-db ::inc-h  (fn [db [_ room]] (update-in db [room :length] (fnil inc 0))))
   (rd/reg-event-db ::init   (fn [db _]        (-> db
                                                   (update :kitchen merge {:width 10 :length 15})
                                                   (update :garage merge {:width 20 :length 20})))))

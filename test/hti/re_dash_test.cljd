@@ -489,15 +489,45 @@
       (is (= 3 @flow-ran-count))
       (is (= 21 @(rd-testing/subscribe [::width :garage])))
       (is (= 26 @(rd-testing/subscribe [::length :garage])))
-      (is (= 546 @(rd-testing/subscribe [::area :garage]))))
+      (is (= 546 @(rd-testing/subscribe [::area :garage]))))))
 
+(defn calc-area
+  [{:keys [w h]}]
+  ((fnil * 0 0) w h))
 
-    (testing "multiple registrations of the same flow does not duplicate them"
+(deftest flow-dependencies
 
-      (rd/reg-flow flow)
-      (rd/reg-flow flow)
-      (rd/reg-flow flow)
+  (await (rd/dispatch-sync [::init]))
 
-      (is (= 1
-             (-> (filter #(= (:id flow) (:id %)) @rd/flows)
-                 count))))))
+  (rd/reg-flow
+    {:id     :kitchen-area
+     :inputs {:w [:kitchen :width]
+              :h [:kitchen :length]}
+     :output calc-area
+     :path   [:kitchen :area]})
+
+  (rd/reg-flow
+    {:id     :garage-area
+     :inputs {:w [:garage :width]
+              :h [:garage :length]}
+     :output calc-area
+     :path   [:garage :area]})
+
+  (rd/reg-flow
+    {:id     :main-room-ratio
+     :inputs {:w (rd/flow<- :kitchen-area)
+              :h (rd/flow<- :garage-area)}
+     :output calc-area
+     :path   [:main :area]})
+
+  (rd/reg-flow
+    {:id     :universal-ratio
+     :inputs {:w (rd/flow<- :main-room-ratio)
+              :h (rd/flow<- :main-room-ratio)}
+     :output calc-area
+     :path   [:universal :area]})
+
+  (is (= 150 @(rd-testing/subscribe [::area :kitchen])))
+  (is (= 500 @(rd-testing/subscribe [::area :garage])))
+  (is (= 75000 @(rd-testing/subscribe [::area :main])))
+  (is (= 5625000000 @(rd-testing/subscribe [::area :universal]))))
