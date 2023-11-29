@@ -489,7 +489,10 @@
       (is (= 3 @flow-ran-count))
       (is (= 21 @(rd-testing/subscribe [::width :garage])))
       (is (= 26 @(rd-testing/subscribe [::length :garage])))
-      (is (= 546 @(rd-testing/subscribe [::area :garage]))))))
+      (is (= 546 @(rd-testing/subscribe [::area :garage]))))
+
+    (testing "subscribing to a flow directly"
+      (is (= 546 @(rd-testing/subscribe [:flow {:id :garage-area}]))))))
 
 (defn calc-area
   [{:keys [w h]}]

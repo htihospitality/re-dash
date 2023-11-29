@@ -6,12 +6,8 @@
             [clojure.data :as data]
             [hti.debugging :as debugging]
             [hti.interceptors :as interceptors]
-            [alandipert.kahn :as kahn]))
-
-
-;; Database
-
-(defonce ^:private app-db (atom {}))
+            [hti.flows :as flows]
+            [hti.app-db :as app-db]))
 
 
 ;; Subscriptions
@@ -32,6 +28,11 @@
               {k @v})
             signals)
        (into {})))
+
+(defn- flow?
+  "Checks if the supplied query-vec is a Flow"
+  [query-vec]
+  (= :flow (first query-vec)))
 
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
@@ -67,34 +68,42 @@
   See also: `reg-sub`
   "
   [query-vec]
-  (let [subscription-id (first query-vec)]
-    (if-let [{:keys [signal-builder computation-fn]}
-             (get @subscriptions subscription-id)]
-      (f/$ (computation-fn
-             (let [signals ((signal-builder subscribe) query-vec)]
-               (cond
-                 (vector? signals) (map #(f/<! %) signals)
-                 (map? signals)    (map->signals signals)
-                 :else             (f/<! signals)))
-             query-vec))
-      (throw (Exception. (str "Subscription not found: " subscription-id))))))
+  (if (flow? query-vec)
+
+    (flows/subscribe query-vec)
+
+    (let [subscription-id (first query-vec)]
+      (if-let [{:keys [signal-builder computation-fn]}
+               (get @subscriptions subscription-id)]
+        (f/$ (computation-fn
+               (let [signals ((signal-builder subscribe) query-vec)]
+                 (cond
+                   (vector? signals) (map #(f/<! %) signals)
+                   (map? signals)    (map->signals signals)
+                   :else             (f/<! signals)))
+               query-vec))
+        (throw (Exception. (str "Subscription not found: " subscription-id)))))))
 
 (defn derefable-subscribe
   "Same as subscribe but used in tests, i.e. can be de-referenced
   Cells can't be de-referenced outside a reactive context,
   see: https://clojurians.slack.com/archives/C03A6GE8D32/p1687275849503059"
   [query-vec]
-  (let [subscription-id (first query-vec)]
-    (if-let [{:keys [signal-builder computation-fn]}
-             (get @subscriptions subscription-id)]
-      (atom (computation-fn
-              (let [signals ((signal-builder derefable-subscribe) query-vec)]
-                (cond
-                  (vector? signals) (map deref signals)
-                  (map? signals)    (derefable-map->signals signals)
-                  :else             @signals))
-              query-vec))
-      (throw (Exception. (str "Subscription not found: " subscription-id))))))
+  (if (flow? query-vec)
+
+    (flows/derefable-subscribe query-vec)
+
+    (let [subscription-id (first query-vec)]
+      (if-let [{:keys [signal-builder computation-fn]}
+               (get @subscriptions subscription-id)]
+        (atom (computation-fn
+                (let [signals ((signal-builder derefable-subscribe) query-vec)]
+                  (cond
+                    (vector? signals) (map deref signals)
+                    (map? signals)    (derefable-map->signals signals)
+                    :else             @signals))
+                query-vec))
+        (throw (Exception. (str "Subscription not found: " subscription-id)))))))
 
 (defn build-sub-map
   [args]
@@ -123,8 +132,8 @@
         (case (count input-args)
           0 (fn [_]
               (fn app-db-subscription
-                ([_] app-db)
-                ([_ _] app-db)))
+                ([_] app-db/app-db)
+                ([_ _] app-db/app-db)))
           1 (let [input-fn (first input-args)]
               (if (fn? input-fn)
                 (fn [_] input-fn)
@@ -227,7 +236,7 @@
 
   ;; Do :db effect first
   (when-let [db (:db effects)]
-    (reset! app-db db))
+    (reset! app-db/app-db db))
 
   ;; Do other effects
   (doseq [effect-id (-> effects (dissoc :db) keys)]
@@ -320,7 +329,7 @@
   (->interceptor :re-dash/prime-cofx
                  (fn [context]
                    (assoc context :coeffects {:event event-vec
-                                              :db    @app-db}))
+                                              :db    @app-db/app-db}))
                  nil))
 
 (defn inject-cofx
@@ -345,140 +354,23 @@
                               #(get-in % (flatten args))))
                  (fn [context]
                    (update-in context [:effects :db]
-                              #(assoc-in @app-db (flatten args) %)))))
+                              #(assoc-in @app-db/app-db (flatten args) %)))))
 
 
 ;; Flows
 
-(defonce ^:private flows (atom {:definitions {}
-                                :sorted-ids  []}))
-
-(def ^:private flow? map?)
-
-(defn- get-flow
-  [flow-id definitions]
-  (or (flow-id definitions)
-      (throw (Exception. (str "Flow not found: " flow-id)))))
-
-(defn- derived-input-path
-  "If input-path is a ref to another flow, return its path"
-  [definitions input-path]
-  (when (flow? input-path)
-    (-> input-path
-        ::flow<-
-        (get-flow definitions)
-        :path)))
-
-(defn- resolve-inputs
-  "Resolves the flow inputs to their current values in app-db"
-  [db inputs definitions]
-  (->> (map (fn [[input-key input-path]]
-              {input-key (get-in db
-                                 (or (derived-input-path definitions input-path)
-                                     input-path))})
-            inputs)
-       (into {})))
-
-
-(def ^:private flow-interceptor
-  (interceptors/->interceptor
-    :re-dash/flow
-    (fn [{{db :db} :effects
-          :as      context}]
-      (let [app-db                           @app-db
-            {:keys [definitions sorted-ids]} @flows]
-        (assoc-in context [:effects :db]
-                  (reduce (fn [new-db flow-id]
-                            (let [{:keys [inputs output path]}
-                                  (get-flow flow-id definitions)
-
-                                  new-db-resolved-inputs
-                                  (resolve-inputs new-db inputs definitions)
-
-                                  old-db-resolved-inputs
-                                  (resolve-inputs app-db inputs definitions)]
-
-                              (if (not= new-db-resolved-inputs old-db-resolved-inputs)
-                                (assoc-in new-db path (output new-db-resolved-inputs))
-                                new-db)))
-                          db
-                          sorted-ids))))
-    nil))
-
-
 (defn flow<-
   "Return a representation of a referenced input flow"
   [flow-id]
-  {::flow<- flow-id})
-
-(defn- sort-flow-ids
-  "Sort all Flow definition dependency graphs
-  using Khan's topological sorting algorithm"
-  [definitions flow-id]
-
-  (or (->> definitions
-           (map (fn [[_ {:keys [graph]}]] graph))
-           (apply merge-with into {})
-           kahn/kahn-sort)
-
-      (throw (ex-info "Cyclic dependency detected when registering Flow"
-                      {:flow-id flow-id}))))
-
-(defn- inputs->graph
-  "Returns a dependency graph between the flow & its inputs
-
-  for example this flow definition:
-
-  {:id     :a
-   :inputs {:dep-b  (rd/flow<- :b)
-            :dep-c  (rd/flow<- :c)
-            :no-dep [:some :path]}}
-
-  results in graph:
-
-  {:b  #{:a}
-   :c  #{:a}
-   nil #{:a}}
-  "
-  [flow-id inputs]
-  (->> (map (fn [[_ v]]
-              (if (flow? v)
-                {(::flow<- v) #{flow-id}}
-                {nil #{flow-id}}))
-            inputs)
-       (apply merge-with into {})))
-
-(defn- ->sorted-flows
-  "Adds a new Flow definition and sort all the Flow IDs"
-  [{:keys [definitions]}
-   {:keys [id] :as flow}]
-  (let [definitions' (assoc definitions id flow)]
-    {:definitions definitions'
-     :sorted-ids  (->> (sort-flow-ids definitions' id)
-                       (remove nil?))}))
+  {:re-dash/flow<- flow-id})
 
 (defn reg-flow
 
   ([flow]
    (reg-flow (:id flow) flow))
 
-  ([flow-id {:keys [inputs output path] :as flow}]
-   (when-not flow-id (throw (ex-info "id is required" flow)))
-
-   (let [flow' (assoc flow
-                      :id flow-id
-                      :graph (inputs->graph flow-id inputs))]
-
-     ;; Register the flow definition
-     (swap! flows #(->sorted-flows % flow'))
-
-     ;; Run the flow for the first time
-     (swap! app-db
-            #(assoc-in % path
-                       (->> (:definitions @flows)
-                            (resolve-inputs % inputs)
-                            output))))))
-
+  ([flow-id flow]
+   (flows/reg-flow flow-id flow)))
 
 
 ;; Events Queue
@@ -520,7 +412,7 @@
                    (prime-cofx-interceptor event-vec)]
                   @global-interceptors
                   interceptors
-                  [flow-interceptor])]
+                  [flows/flow-interceptor])]
 
       (when-not registered-event
         (throw (Exception. (str "Event not found: " event-id))))

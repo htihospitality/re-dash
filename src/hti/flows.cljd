@@ -1,0 +1,147 @@
+(ns hti.flows
+  (:require [hti.interceptors :as interceptors]
+            [hti.app-db :as app-db]
+            [alandipert.kahn :as kahn]
+            [cljd.flutter :as f]))
+
+(defonce ^:private flows (atom {:definitions {}
+                                :sorted-ids  []}))
+
+(def ^:private flow? map?)
+
+(defn- get-flow
+  [flow-id definitions]
+  (or (flow-id definitions)
+      (throw (Exception. (str "Flow not found: " flow-id)))))
+
+(defn- derived-input-path
+  "If input-path is a ref to another flow, return its path"
+  [definitions input-path]
+  (when (flow? input-path)
+    (-> input-path
+        :re-dash/flow<-
+        (get-flow definitions)
+        :path)))
+
+(defn- resolve-inputs
+  "Resolves the flow inputs to their current values in app-db"
+  [db inputs definitions]
+  (->> (map (fn [[input-key input-path]]
+              {input-key (get-in db
+                                 (or (derived-input-path definitions input-path)
+                                     input-path))})
+            inputs)
+       (into {})))
+
+
+(def flow-interceptor
+  (interceptors/->interceptor
+    :re-dash/flow
+    (fn [{{db :db} :effects
+          :as      context}]
+      (let [app-db                           @app-db/app-db
+            {:keys [definitions sorted-ids]} @flows]
+        (assoc-in context [:effects :db]
+                  (reduce (fn [new-db flow-id]
+                            (let [{:keys [inputs output path]}
+                                  (get-flow flow-id definitions)
+
+                                  new-db-resolved-inputs
+                                  (resolve-inputs new-db inputs definitions)
+
+                                  old-db-resolved-inputs
+                                  (resolve-inputs app-db inputs definitions)]
+
+                              (if (not= new-db-resolved-inputs old-db-resolved-inputs)
+                                (assoc-in new-db path (output new-db-resolved-inputs))
+                                new-db)))
+                          db
+                          sorted-ids))))
+    nil))
+
+
+(defn- sort-flow-ids
+  "Sort all Flow definition dependency graphs
+  using Khan's topological sorting algorithm"
+  [definitions flow-id]
+
+  (or (->> definitions
+           (map (fn [[_ {:keys [graph]}]] graph))
+           (apply merge-with into {})
+           kahn/kahn-sort)
+
+      (throw (ex-info "Cyclic dependency detected when registering Flow"
+                      {:flow-id flow-id}))))
+
+(defn- inputs->graph
+  "Returns a dependency graph between the flow & its inputs
+
+  for example this flow definition:
+
+  {:id     :a
+   :inputs {:dep-b  (rd/flow<- :b)
+            :dep-c  (rd/flow<- :c)
+            :no-dep [:some :path]}}
+
+  results in graph:
+
+  {:b  #{:a}
+   :c  #{:a}
+   nil #{:a}}
+  "
+  [flow-id inputs]
+  (->> (map (fn [[_ v]]
+              (if (flow? v)
+                {(:re-dash/flow<- v) #{flow-id}}
+                {nil #{flow-id}}))
+            inputs)
+       (apply merge-with into {})))
+
+(defn- ->sorted-flows
+  "Adds a new Flow definition and sort all the Flow IDs"
+  [{:keys [definitions]}
+   {:keys [id] :as flow}]
+  (let [definitions' (assoc definitions id flow)]
+    {:definitions definitions'
+     :sorted-ids  (->> (sort-flow-ids definitions' id)
+                       (remove nil?))}))
+
+(defn reg-flow
+
+  ([flow]
+   (reg-flow (:id flow) flow))
+
+  ([flow-id {:keys [inputs output path] :as flow}]
+   (when-not flow-id (throw (ex-info "id is required" flow)))
+
+   (let [flow' (assoc flow
+                      :id flow-id
+                      :graph (inputs->graph flow-id inputs))]
+
+     ;; Register the flow definition
+     (swap! flows #(->sorted-flows % flow'))
+
+     ;; Run the flow for the first time
+     (swap! app-db/app-db
+            #(assoc-in % path
+                       (->> (:definitions @flows)
+                            (resolve-inputs % inputs)
+                            output))))))
+
+(defn- path
+  [query-vec]
+  (let [flow-id (-> query-vec second :id)]
+
+    (-> flow-id
+        (get-flow (:definitions @flows))
+        :path)))
+
+(defn subscribe
+  [query-vec]
+  (let [path (path query-vec)]
+    (f/$ (get-in (f/<! app-db/app-db) path))))
+
+(defn derefable-subscribe
+  [query-vec]
+  (let [path (path query-vec)]
+    (atom (get-in @app-db/app-db path))))
