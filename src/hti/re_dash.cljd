@@ -601,4 +601,14 @@
   (reg-event-db
     :re-dash/initialize-db
     (fn [_ [_ db]]
-      (or db {}))))
+      (or db {})))
+
+  (reg-fx
+    :reg-flow
+    (fn [flow]
+      (flows/reg-flow flow)))
+
+  (reg-fx
+    :clear-flow
+    (fn [flow-id]
+      (flows/clear-flow! flow-id))))
