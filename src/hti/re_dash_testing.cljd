@@ -1,8 +1,8 @@
 (ns hti.re-dash-testing
   {:deprecated "0.9.0"
-   :superseded-by "hti.re-dash.testing"}
+   :superseded-by "hti.re-dash.testing.core"}
   (:require [hti.re-dash.core :as rd]
-            [hti.re-dash.testing :as testing]))
+            [hti.re-dash.testing.core :as testing]))
 
 
 (def reset-app-db-fixture testing/reset-app-db-fixture)

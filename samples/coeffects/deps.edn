@@ -1,8 +1,15 @@
-{:paths ["src"]
+{:paths ["src" "../../src"]
  :deps {tensegritics/clojuredart
         {:git/url "https://github.com/tensegritics/ClojureDart.git"
-         :sha "1ba3d2240b3bc5c104620be6d3f723db77dfed68"}
-        net.clojars.htihospitality/re-dash {:mvn/version "0.8.1"}}
+
+         ;; In real use scenario, get the latest SHA from ClojureDart Github page
+         :sha "303e2621391abaf52a7179efb848bf6d73ebb2e8"}
+
+        ;; In real use scenario, remove second, relative source path from :paths above,
+        ;; un-comment the line below, and set to the latest released re-dash version.
+        ;; net.clojars.htihospitality/re-dash {:mvn/version "x.x.x"}
+        }
+
  :aliases {:cljd {:main-opts ["-m" "cljd.build"]}}
  :cljd/opts {:kind :flutter
              :main acme.main}}

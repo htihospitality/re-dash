@@ -2,8 +2,8 @@
   (:require ["dart:async" :as da]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [cljd.flutter :as f]
-            [hti.re-dash.core :as rd]
-            [hti.re-dash.testing :as rd-testing]
+            [hti.re-dash.alpha :as rd]
+            [hti.re-dash.testing.alpha :as rd-testing]
             [hti.re-dash.app-db :as app-db]
             [hti.re-dash.flows :as flows]))
 

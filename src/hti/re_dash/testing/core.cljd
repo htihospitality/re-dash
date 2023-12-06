@@ -1,4 +1,4 @@
-(ns hti.re-dash.testing
+(ns hti.re-dash.testing.core
   (:require [hti.re-dash.core :as rd]))
 
 

@@ -3,7 +3,7 @@
             [clojure.test :refer [deftest is testing use-fixtures]]
             [cljd.flutter :as f]
             [hti.re-dash.core :as rd]
-            [hti.re-dash.testing :as rd-testing]))
+            [hti.re-dash.testing.core :as rd-testing]))
 
 (defn default-subscriptions
   ([]
