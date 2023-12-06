@@ -64,7 +64,7 @@ Then, add the `re-dash` dependency
 - `samples/signals` Same as 'samples/counter' but showing various subscription signals: single, vector & map
 - `samples/coeffects` Shows an example of injecting coeffects into an event handler
 - `samples/local_storage` Shows an example of how to initialize shared_preferences and inject values into event handlers using coeffects
-- `samples/flow` (alpha) Shows an example of using Flows to calculate a derived result of some calculation, in addition to Flow life-cycle controls.
+- `samples/flow` (alpha) Shows an example of using [Flows](/doc/03-flows.md) to calculate a derived result of some calculation, in addition to Flow life-cycle controls.
 
 ## Quickstart
 
