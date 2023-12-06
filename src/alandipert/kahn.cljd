@@ -5,6 +5,8 @@
 ;; the terms of this license.
 ;; You must not remove this notice, or any other, from this software.
 
+;; Borrowed from https://gist.github.com/alandipert/1263783/11de850ddeff201330fbd1f78d2518c451fa509b
+
 (ns alandipert.kahn
   (:require [clojure.set :refer [difference union intersection]]))
 

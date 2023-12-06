@@ -32,9 +32,9 @@
   ;; Kill switch (causes the Flow's live? test to pass/fail)
   (rd/reg-sub      ::kill-switch (fn [db _] (:kill-switch db :off)))
   (rd/reg-event-db
-     ::flip-kill-switch
-     (fn [db [_ on-off]]
-       (assoc db :kill-switch on-off)))
+    ::flip-kill-switch
+    (fn [db [_ on-off]]
+      (assoc db :kill-switch on-off)))
 
   ;; Flow register & de-register
   (rd/reg-event-fx
@@ -48,7 +48,8 @@
       {:clear-flow (:id area-flow)}))
 
   ;; Initialize db
-  (rd/reg-event-db ::init   (fn [db _]        (-> db
-                                                  #_(update :kitchen merge {:width 10 :length 15})
-                                                  (update :garage merge {:width 20 :length 20})
-                                                  (assoc :kill-switch :off)))))
+  (rd/reg-event-db
+    ::init
+    (fn [db _]
+      (-> (update db :garage merge {:width 20 :length 20})
+          (assoc :kill-switch :off)))))
