@@ -5,4 +5,5 @@
            :task (shell "clojure -M:cljd compile")}
 
   build {:doc  "Builds the deployable assets"
-         :task (shell "flutter build web")}}}
+         :task (shell "flutter build web")
+         :depends [compile]}}}

@@ -44,6 +44,10 @@ jobs:
           bb: '1.3.179'
 
       - name: Build
+        run: flutter create web
+        working-directory: samples/counter
+
+      - name: Build
         run: bb build
         working-directory: samples/counter
 
