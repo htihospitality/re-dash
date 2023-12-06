@@ -2,10 +2,10 @@
   (:require ["dart:async" :as da]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [cljd.flutter :as f]
-            [hti.re-dash :as rd]
-            [hti.re-dash-testing :as rd-testing]
-            [hti.app-db :as app-db]
-            [hti.flows :as flows]))
+            [hti.re-dash.core :as rd]
+            [hti.re-dash.testing :as rd-testing]
+            [hti.re-dash.app-db :as app-db]
+            [hti.re-dash.flows :as flows]))
 
 (defn default-flow-handlers
   ([]

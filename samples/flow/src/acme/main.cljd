@@ -3,7 +3,7 @@
             [cljd.flutter :as f]
             [acme.view :as view]
             [acme.model :as model]
-            [hti.re-dash :as rd]
+            [hti.re-dash.core :as rd]
             [alandipert.kahn :as kahn]))
 
 (defn calc-area

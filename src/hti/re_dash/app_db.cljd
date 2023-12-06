@@ -1,4 +1,4 @@
-(ns hti.app-db)
+(ns hti.re-dash.app-db)
 
 ;; The app-db.
 ;; Do not access directly from application code.

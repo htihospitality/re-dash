@@ -1,0 +1,327 @@
+(ns hti.re-dash.alpha
+  (:require ["dart:async" :as da]
+            ["dart:collection" :as coll]
+            [cljd.flutter :as f]
+            [clojure.string :as string]
+            [clojure.data :as data]
+            [hti.re-dash.flows :as flows]
+            [hti.re-dash.core :as core]))
+
+
+;; Subscriptions
+
+(defn subscribe
+  "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
+
+  Given a `query` vector it will, over
+  time, reactively deliver a stream of values. So, in FRP-ish terms,
+  it returns a `Signal`.
+
+  To obtain the current value from the Signal, it must be dereferenced via `:watch`:
+
+      #!clj
+      (f/widget
+       :watch [current-count (subscribe [::model/get-count])]
+       (m/Text (str current-count)))
+
+
+  `query` is a vector of at least one element. The first element is the
+  `query-id`, typically a namespaced keyword. The rest of the vector's
+  elements are optional, additional values which parameterise the query
+  performed.
+
+  **Example Usage**:
+
+      #!clj
+      (subscribe [:items])
+      (subscribe [:items \"blue\" :small])
+      (subscribe [:items {:colour \"blue\"  :size :small}])
+
+  Note: for any given call to `subscribe` there must have been a previous call
+  to `reg-sub`, registering the query handler (functions) associated with
+  `query-id`.
+
+  See also: `reg-sub`
+  "
+  [query-vec]
+  (core/subscribe query-vec))
+
+(defn derefable-subscribe
+  "Same as subscribe but used in tests, i.e. can be de-referenced
+  Cells can't be de-referenced outside a reactive context,
+  see: https://clojurians.slack.com/archives/C03A6GE8D32/p1687275849503059"
+  [query-vec]
+  (core/derefable-subscribe query-vec))
+
+(defn reg-sub
+  "A call to `reg-sub` associates a `query-id` with one function.
+
+  The two arguments are:
+
+    - `query-id` - typically a namespaced keyword (later used in subscribe)
+    - a `computation function` which computes the value (output)
+
+  Registers a sub to receive derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
+
+          #!clj
+          (reg-sub
+            :query-id
+            (fn [db [_ foo]]
+              (get db foo)))
+
+  It also supports the arrow syntax sugar of re-frame:
+
+          #!clj
+          ;; equivalent to (reg-sub :query-id (fn [db _] (:foo db)))
+          ;; (subscribe [:query-id])
+          (reg-sub
+            :query-id
+            :-> :foo))
+
+          #!clj
+          ;; equivalent to (reg-sub :query-id (fn [db [_ & opts]] (apply get-in db opts)))
+          ;; (subscribe [:query-id [[:foo :bar]]])
+          (reg-sub
+            :query-id
+            :=> get-in)
+
+  See also: `subscribe`
+  "
+  [subscription-id & args]
+  (core/reg-sub subscription-id args))
+
+
+;; Effects
+
+(defn reg-fx
+  "Register the given effect `handler` for the given `id`:
+
+    - `id` is keyword, often namespaced.
+    - `handler` is a side-effecting function which takes a single argument and whose return
+      value is ignored.
+
+  To use, first, associate `:effect2` with a handler:
+
+      #!clj
+      (reg-fx
+         :effect2
+         (fn [value]
+            ... do something side-effect-y))
+
+  Then, later, if an event handler were to return this effects map:
+
+      #!clj
+      {:effect2  [1 2]}
+
+  then the `handler` `fn` we registered previously, using `reg-fx`, will be
+  called with an argument of `[1 2]`.
+  "
+  [effect-id f]
+  (core/reg-fx effect-id f))
+
+
+
+;; Coeffects
+
+
+(defn reg-cofx
+  "Registers a coeffect by cofx-id with the function used
+  to obtain a value from the outside world (like local storage etc.)"
+  [cofx-id f]
+  (core/reg-cofx cofx-id f))
+
+(defn reg-sub-as-cofx
+  "Registers a \"fake\" subscription as a coeffect to use with `inject-cofx`.
+  Unlike regular subscriptions these are not reactive nor cached. If you need
+  those benefits of regular subscriptions, consider `:watch`ing those in your
+  component then pass them in to the event handler.
+  Injects the current value of the subscription to the coeffects map under the
+  id of the subscription."
+  [args]
+  (core/reg-sub-as-cofx args))
+
+
+;; Interceptors
+
+(defn reg-global-interceptor
+  "Registers an interceptor that will be automatically injected into all event handlers"
+  [interceptor]
+  (core/reg-global-interceptor interceptor))
+
+(defn ->interceptor
+  "Creates a new interceptor identified by the keywordized id
+  and with nillable before and after functions"
+  [id before after]
+  (core/->interceptor id before after))
+
+(defn debug
+  "Interceptor that logs debug information after event execution.
+  A map of options may be supplied:
+    - `:args?`  Default `false`. Include the arguments passed to the event when it was dispatched.
+    - `:diff?`  Default `true`.  Include the 1st two elements from the `clojure.data/diff` tuple applied on the db..
+    - `:stats?` Default `false`. Include basic timed statistics for the event execution.
+    - `:target` Default `:target/console`. Logging target, one of
+      - `:target/console`   - Standard out
+      - `:target/dev-tools` - (Experimental) Flutter [DevTools logging view](https://docs.flutter.dev/tools/devtools/logging), with Kind `re-dash`
+      - `:target/everywhere` - Log to both console and Flutter DevTools (experimental)"
+  ([]
+   (debug {}))
+  ([options]
+   (core/debug options)))
+
+(defn inject-cofx
+  "Injects a registered cofx (identified by cofx-id) into the interceptor chain
+  An optional arg can be supplied for example some lookup key"
+  ([cofx-id]
+   (inject-cofx cofx-id nil))
+  ([cofx-id arg]
+   (core/inject-cofx cofx-id arg)))
+
+(defn path
+  "Returns an interceptor which acts somewhat like clojure.core/update-in, in the sense that the event handler is given a specific part of app-db to change, not all of app-db."
+  [& args]
+  (core/path args))
+
+
+
+;; Flows
+
+(defn flow<-
+  "Return a representation of a referenced input flow"
+  [flow-id]
+  {:re-dash/flow<- flow-id})
+
+(defn reg-flow
+
+  ([flow]
+   (reg-flow (:id flow) flow))
+
+  ([flow-id flow]
+   (flows/reg-flow flow-id flow)))
+
+
+
+;; Events
+
+
+(defn reg-event-fx
+  "Register the given event `handler` (function) for the given `id`. :
+
+    - `id` is typically a namespaced keyword
+    - `handler` is a function: (coeffects-map event-vector) -> effects-map
+
+
+  Example Usage:
+
+      #!clj
+      (reg-event-fx
+        :event-id
+        (fn [cofx event]
+          {:db (assoc (:db cofx) :some-key (get event 2))}))   ;; return a map of effects
+
+
+  Or perhaps:
+
+      #!clj
+      (reg-event-fx
+        :namespaced/id           ;; <-- namespaced keywords are often used
+        (fn [{:keys [db] :as cofx} [_ arg1 arg2]] ;; destructure both arguments
+          {:db (assoc db :some-key arg1)          ;; return a map of effects
+           :fx [[:dispatch [:some-event arg2]]]}))
+  "
+
+  ([event-id f]
+   (reg-event-fx event-id [] f))
+  ([event-id interceptors f]
+   (core/reg-event-fx event-id interceptors f)))
+
+(defn reg-event-db
+  "Register the given event `handler` (function) for the given `id`:
+
+    - `id` is typically a namespaced keyword
+    - `handler` is a function: (db event) -> db
+
+  Example Usage:
+
+      #!clj
+      (reg-event-db
+        :token
+        (fn [db event]
+          (assoc db :some-key (get event 2)))  ;; return updated db
+
+  Or perhaps:
+
+      #!clj
+      (reg-event-db
+        :namespaced/id           ;; <-- namespaced keywords are often used
+        (fn [db [_ arg1 arg2]]   ;; <-- event vector is destructured
+          (-> db
+            (dissoc arg1)
+            (update :key + arg2))))   ;; return updated db
+  "
+  ([event-id f]
+   (reg-event-db event-id [] f))
+  ([event-id interceptors f]
+   (core/reg-event-db event-id interceptors f)))
+
+
+(defn dispatch-sync
+  "Use with await for example (await (dispatch-sync [:some-thing]))
+
+  Synchronously (immediately) process `event`. It does **not** queue
+  the event for handling later as `dispatch` does.
+
+  `event` is a vector and the first element is a keyword
+  which identifies the kind of event.
+
+  It is an error to use `dispatch-sync` within an event handler because
+  you can't immediately process an new event when one is already
+  part way through being processed.
+
+  Generally, avoid using this function, and instead, use `dispatch`.
+  Only use it in the narrow set of cases where any delay in
+  processing is a problem:
+
+    1. when initialising your app
+    2. in a unit test where immediate, synchronous processing is useful
+
+  Usage:
+
+      #!clj
+      (dispatch-sync [:sing :falsetto \"piano accordion\"])
+  "
+  [event-vec]
+  (core/dispatch-sync event-vec))
+
+(defn dispatch
+  "Queue `event` for processing (handling).
+
+  `event` is a vector and the first element is a keyword
+  which identifies the kind of event.
+
+  Event handling does not happen immediately. It will happen 'very soon'
+  but not now.
+
+  Usage:
+
+      #!clj
+      (dispatch [:order \"pizza\" {:supreme 2 :meatlovers 1 :veg 1}])
+  "
+  [event-vec]
+  (core/dispatch event-vec))
+
+(defn register-defaults!
+  "Optional default registrations for convenience"
+  []
+
+  (core/register-defaults!)
+
+  (reg-fx
+    :reg-flow
+    (fn [flow]
+      (flows/reg-flow flow)))
+
+  (reg-fx
+    :clear-flow
+    (fn [flow-id]
+      (flows/clear-flow! flow-id))))

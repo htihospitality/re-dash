@@ -1,9 +1,9 @@
-(ns hti.flows
-  (:require [hti.interceptors :as interceptors]
-            [hti.app-db :as app-db]
+(ns hti.re-dash.flows
+  (:require [hti.re-dash.interceptors :as interceptors]
+            [hti.re-dash.app-db :as app-db]
             [alandipert.kahn :as kahn]
             [cljd.flutter :as f]
-            [hti.utils :as utils]))
+            [hti.re-dash.utils :as utils]))
 
 (defonce ^:private flows (atom {:definitions {}
                                 :sorted-ids  []}))

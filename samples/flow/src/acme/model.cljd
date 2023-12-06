@@ -1,5 +1,5 @@
 (ns acme.model
-  (:require [hti.re-dash :as rd]))
+  (:require [hti.re-dash.core :as rd]))
 
 (def area-flow
   {:id          :garage-area

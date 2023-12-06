@@ -2,23 +2,23 @@
   (:require ["dart:async" :as da]
             [clojure.test :refer [deftest is testing use-fixtures]]
             [cljd.flutter :as f]
-            [hti.re-dash :as rd]
-            [hti.re-dash-testing :as rd-testing]))
+            [hti.re-dash.core :as rd]
+            [hti.re-dash.testing :as rd-testing]))
 
 (defn default-subscriptions
   ([]
 
-   (hti.re-dash/reg-sub
+   (rd/reg-sub
      ::hoge
      (constantly {})
      (constantly 42))
 
-   (hti.re-dash/reg-sub
+   (rd/reg-sub
      ::fuga
      (constantly {})
      (constantly 9001))
 
-   (hti.re-dash/reg-sub
+   (rd/reg-sub
      :get-count
      (fn [db _]
        (:current-count db))))
@@ -327,7 +327,7 @@
         (let [current (inc (:count db 0))]
           {:db (assoc db :count current)})))
 
-    (hti.re-dash/reg-sub
+    (rd/reg-sub
       :get-count-path
       (fn [db _]
         (get-in db path)))

@@ -1,5 +1,5 @@
 (ns acme.model
-  (:require [hti.re-dash :as rd]))
+  (:require [hti.re-dash.core :as rd]))
 
 (defn do-something-for-while
   []
@@ -32,4 +32,4 @@
    ::log-count
    (fn [current-count]
      (do-something-for-while)
-     (println (str "The current-count is " current-count)))))
+     (dart:core/print (str "The current-count is " current-count)))))
