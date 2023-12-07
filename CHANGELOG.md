@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.9.0 - 2023-12-07
+### Changes
+- Added support for [Flows](/doc/03-flows.md) (alpha) [PR 25](https://github.com/htihospitality/re-dash/pull/25)
+- Added namespace `hti.re-dash.alpha` for trying out API's that might change in future.
+- Added deprecation notice for namespace `hti.re-dash` - use `hti.re-dash.core` instead.
+
 ## 0.8.1 - 2023-11-21
 ### Changes
 - Added re-dash-testing namespace to deployed jar artifact
