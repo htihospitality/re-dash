@@ -2,7 +2,7 @@
   (:require ["package:flutter/material.dart" :as m]
             [cljd.flutter :as f]
             [acme.model :as model]
-            [hti.re-dash :as rd]))
+            [hti.re-dash.core :as rd]))
 
 (def counter
   (m/Column

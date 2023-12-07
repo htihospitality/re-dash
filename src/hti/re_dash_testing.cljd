@@ -1,26 +1,10 @@
 (ns hti.re-dash-testing
-  (:require [hti.re-dash :as rd]))
+  {:deprecated "0.9.0"
+   :superseded-by "hti.re-dash.testing.core"}
+  (:require [hti.re-dash.core :as rd]
+            [hti.re-dash.testing.core :as testing]))
 
 
-;; test fixtures
+(def reset-app-db-fixture testing/reset-app-db-fixture)
 
-(defn reset-app-db-fixture
-  "Test fixture that will reset / empty app-db before
-  and after running the test(s)"
-  ([]
-   (rd/register-defaults!)
-   (await (rd/dispatch [:re-dash/initialize-db])))
-  ([_]
-   (await (rd/dispatch [:re-dash/initialize-db]))))
-
-
-;; re-dash test facades
-
-(defn subscribe
-  "Same as hti.re-dash/subscribe but implemented using atom instead of Cell
-  meaning it can be de-referenced from tests.
-
-  Cells can't be de-referenced outside a reactive context,
-  see: https://clojurians.slack.com/archives/C03A6GE8D32/p1687275849503059"
-  [query-vec]
-  (rd/derefable-subscribe query-vec))
+(def subscribe testing/subscribe)

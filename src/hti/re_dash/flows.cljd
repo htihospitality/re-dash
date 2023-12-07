@@ -1,0 +1,250 @@
+(ns hti.re-dash.flows
+  (:require [hti.re-dash.interceptors :as interceptors]
+            [hti.re-dash.app-db :as app-db]
+            [alandipert.kahn :as kahn]
+            [cljd.flutter :as f]
+            [hti.re-dash.utils :as utils]))
+
+(defonce ^:private flows (atom {:definitions {}
+                                :sorted-ids  []}))
+
+(def ^:private flow? map?)
+
+(defn- get-flow
+  [flow-id definitions]
+  (or (flow-id definitions)
+      (throw (Exception. (str "Flow not found: " flow-id)))))
+
+(defn- derived-input-path
+  "If input-path is a ref to another flow, return its path"
+  [definitions input-path]
+  (when (flow? input-path)
+    (-> input-path
+        :re-dash/flow<-
+        (get-flow definitions)
+        :path)))
+
+(defn- resolve-inputs
+  "Resolves the flow inputs to their current values in app-db
+  If no inputs supplied we return the db instead"
+  [inputs definitions db]
+  (if inputs
+    (->> (map (fn [[input-key input-path]]
+                {input-key (get-in db
+                                   (or (derived-input-path definitions input-path)
+                                       input-path))})
+              inputs)
+         (into {}))
+    db))
+
+(defn test-flow-alive?
+  "Tests whether the Flow was live? and is currently live?.
+
+  It does this by applying the supplied live? function on the
+  resolved input paths.
+
+  If there are no live-inputs supplied, live? gets applied on db instead"
+  [{:keys [flow old-db new-db definitions] :as args}]
+  (let [{:keys [live? live-inputs]
+         :or   {live? (constantly true)}} flow]
+    (assoc args
+           :old-flow-live? (-> (resolve-inputs live-inputs definitions old-db) live?)
+           :new-flow-live? (-> (resolve-inputs live-inputs definitions new-db) live?))))
+
+(defn calc-flow-action
+  [{:keys [old-flow-live? new-flow-live?] :as args}]
+
+  (assoc args :action
+
+         (cond
+
+           (and old-flow-live?
+                new-flow-live?)
+           ::output
+
+           (and (not old-flow-live?)
+                new-flow-live?)
+           ::initialize
+
+           (and old-flow-live?
+                (not new-flow-live?))
+           ::cleanup
+
+           :else ::none)))
+
+(defn cleanup-fn
+  "Default cleanup function that dissocs path
+  from db including all empty ancestors"
+  [db path]
+  (utils/dissoc-in db path))
+
+(defn exec-flow-action
+  [{:keys [flow action new-db old-db definitions new-flow-live?]}]
+
+  (let [{:keys [inputs output path cleanup]
+         :or   {cleanup cleanup-fn
+                output identity}}
+        flow]
+
+    (condp = action
+
+      ::none
+      new-db
+
+      ::cleanup
+      (cleanup new-db path)
+
+      ::initialize
+      (if new-flow-live?
+        (->> (resolve-inputs inputs definitions new-db)
+             output
+             (assoc-in new-db path))
+        new-db)
+
+      ::output
+      (->> [new-db old-db]
+           (map #(resolve-inputs inputs definitions %))
+           ((fn [[new-resolved-inputs old-resolved-inputs]]
+              (if (not= new-resolved-inputs old-resolved-inputs)
+                (assoc-in new-db path (output new-resolved-inputs))
+                new-db)))))))
+
+(def flow-interceptor
+  (interceptors/->interceptor
+    :re-dash/flow
+    (fn [{{db :db} :effects
+          :as      context}]
+      (let [old-db                           @app-db/app-db
+            {:keys [definitions sorted-ids]} @flows]
+        (assoc-in context [:effects :db]
+                  (reduce (fn [new-db flow-id]
+
+                            (-> {:flow        (get-flow flow-id definitions)
+                                 :definitions definitions
+                                 :new-db      new-db
+                                 :old-db      old-db}
+
+                                test-flow-alive?
+                                calc-flow-action
+                                exec-flow-action))
+
+                          db
+                          sorted-ids))))
+    nil))
+
+
+(defn- sort-flow-ids
+  "Sort all Flow definition dependency graphs
+  using Khan's topological sorting algorithm"
+  [definitions flow-id]
+
+  (or (->> definitions
+           (map (fn [[_ {:keys [graph]}]] graph))
+           (apply merge-with into {})
+           kahn/kahn-sort)
+
+      (throw (ex-info "Cyclic dependency detected when registering Flow"
+                      {:flow-id flow-id}))))
+
+(defn- inputs->graph
+  "Returns a dependency graph between the flow & its inputs
+
+  for example this flow definition:
+
+  {:id     :a
+   :inputs {:dep-b  (rd/flow<- :b)
+            :dep-c  (rd/flow<- :c)
+            :no-dep [:some :path]}}
+
+  results in graph:
+
+  {:b  #{:a}
+   :c  #{:a}
+   nil #{:a}}
+  "
+  [flow-id inputs]
+  (->> (map (fn [[_ v]]
+              (if (flow? v)
+                {(:re-dash/flow<- v) #{flow-id}}
+                {nil #{flow-id}}))
+            inputs)
+       (apply merge-with into {})))
+
+(defn- ->sorted-flows
+  "Adds a new Flow definition and sort all the Flow IDs"
+  [{:keys [definitions]}
+   {:keys [id] :as flow}]
+  (let [definitions' (assoc definitions id flow)]
+    {:definitions definitions'
+     :sorted-ids  (->> (sort-flow-ids definitions' id)
+                       (remove nil?))}))
+
+(defn reg-flow
+
+  ([flow]
+   (reg-flow (:id flow) flow))
+
+  ([flow-id {:keys [inputs] :as flow}]
+   (when-not flow-id (throw (ex-info "id is required" flow)))
+
+   (let [{definitions :definitions}
+         @flows
+
+         old-flow
+         (flow-id definitions)
+
+         new-flow
+         (assoc flow
+                :id flow-id
+                :graph (inputs->graph flow-id inputs))]
+
+     ;; Register the flow definition
+     (swap! flows #(->sorted-flows % new-flow))
+
+     ;; Run the flow for the first time (::initialize)
+     ;; If flow with same ID already exists, first run its cleanup
+     (swap! app-db/app-db
+            #(-> {:flow        new-flow
+                  :new-db      (if old-flow (cleanup-fn % (:path old-flow)) %)
+                  :definitions definitions}
+                 test-flow-alive?
+                 (assoc :action ::initialize)
+                 exec-flow-action)))))
+
+
+(defn clear-flow!
+  "Called from the :clear-flow effect.
+  Clear the flow registration and run its cleanup."
+  [flow-id]
+  (swap! flows
+         (fn [{:keys [definitions sorted-ids] :as flows}]
+           (let [flow (get-flow flow-id definitions)]
+
+             (-> (update flows :definitions dissoc flow-id)
+                 (assoc :sorted-ids
+                        (remove #(#{flow-id} %)
+                                sorted-ids)))
+
+             (swap! app-db/app-db
+                    #(exec-flow-action {:action      ::cleanup
+                                        :flow        flow
+                                        :new-db      %
+                                        :definitions definitions}))))))
+
+(defn- path
+  [query-vec]
+  (let [flow-id (-> query-vec second :id)]
+
+    (-> flow-id
+        (get-flow (:definitions @flows))
+        :path)))
+
+(defn subscribe
+  [query-vec]
+  (let [path (path query-vec)]
+    (f/$ (get-in (f/<! app-db/app-db) path))))
+
+(defn derefable-subscribe
+  [query-vec]
+  (let [path (path query-vec)]
+    (atom (get-in @app-db/app-db path))))

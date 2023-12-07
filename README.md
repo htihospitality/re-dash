@@ -14,13 +14,14 @@ A [ClojureDart](https://github.com/Tensegritics/ClojureDart) framework, inspired
 * Interact with global state via events & subscriptions
 * Handle side effects at the edge with effect handlers
 * Familiar api if coming from re-frame
-  * [Event Dispatch](http://day8.github.io/re-frame/a-loop/#1st-domino-event-dispatch)
-  * [Event Handling](http://day8.github.io/re-frame/a-loop/#2nd-domino-event-handling)
-    * [Coeffects](http://day8.github.io/re-frame/Coeffects/)
-    * [Interceptors](http://day8.github.io/re-frame/Interceptors/)
-  * [Effect Handling](http://day8.github.io/re-frame/a-loop/#3rd-domino-effect-handling)
-  * [Signal Graph](http://day8.github.io/re-frame/a-loop/#domino-4-query)
-  * [Subscriptions](http://day8.github.io/re-frame/a-loop/#domino-5-view)
+  * [Event Dispatch](https://day8.github.io/re-frame/a-loop/#1st-domino-event-dispatch)
+  * [Event Handling](https://day8.github.io/re-frame/a-loop/#2nd-domino-event-handling)
+    * [Coeffects](https://day8.github.io/re-frame/Coeffects/)
+    * [Interceptors](https://day8.github.io/re-frame/Interceptors/)
+  * [Effect Handling](https://day8.github.io/re-frame/a-loop/#3rd-domino-effect-handling)
+  * [Signal Graph](https://day8.github.io/re-frame/a-loop/#domino-4-query)
+  * [Subscriptions](https://day8.github.io/re-frame/a-loop/#domino-5-view)
+  * [Flows](/doc/03-flows.md) (alpha)
 
 ## Documentation
 
@@ -63,6 +64,7 @@ Then, add the `re-dash` dependency
 - `samples/signals` Same as 'samples/counter' but showing various subscription signals: single, vector & map
 - `samples/coeffects` Shows an example of injecting coeffects into an event handler
 - `samples/local_storage` Shows an example of how to initialize shared_preferences and inject values into event handlers using coeffects
+- `samples/flow` (alpha) Shows an example of using [Flows](/doc/03-flows.md) to calculate a derived result of some calculation, in addition to Flow life-cycle controls.
 
 ## Quickstart
 

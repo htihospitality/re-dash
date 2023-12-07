@@ -1,6 +1,6 @@
 (ns acme.model
   (:require ["package:http/http.dart" :as http]
-            [hti.re-dash :as rd]))
+            [hti.re-dash.core :as rd]))
 
 (def albums-url (Uri/parse "https://jsonplaceholder.typicode.com/albums/1"))
 

@@ -1,9 +1,9 @@
-(ns hti.debugging
+(ns hti.re-dash.debugging
   (:require ["dart:developer" :as dev]
             ["dart:convert" :as c]
             [clojure.data :as data]
             [clojure.string :as string]
-            [hti.interceptors :as interceptors]))
+            [hti.re-dash.interceptors :as interceptors]))
 
 
 (defn- log-console!

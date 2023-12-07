@@ -1,0 +1,59 @@
+(ns acme.view
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.model :as model]
+            [hti.re-dash.alpha :as rd]))
+
+(def garage-calculator
+  (f/widget
+    :watch [width (rd/subscribe [::model/width :garage])
+            length (rd/subscribe [::model/length :garage])
+            area (rd/subscribe [::model/area :garage])
+            kill-switch (rd/subscribe [::model/kill-switch])]
+
+    (m/Column
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .children
+      [(m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/IconButton
+            .icon (m/Icon (m/Icons.remove_circle_outline))
+            .onPressed #(rd/dispatch [::model/dec-w :garage]))
+          (m/Text (str "Width: " width))
+          (m/IconButton
+            .icon (m/Icon (m/Icons.add_circle_outline))
+            .onPressed #(rd/dispatch [::model/inc-w :garage]))])
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/IconButton
+            .icon (m/Icon (m/Icons.remove_circle_outline))
+            .onPressed #(rd/dispatch [::model/dec-h :garage]))
+          (m/Text (str "Length: " length))
+          (m/IconButton
+            .icon (m/Icon (m/Icons.add_circle_outline))
+            .onPressed #(rd/dispatch [::model/inc-h :garage]))])
+       (m/Divider)
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/Text (str "Area (derived value from Flow): " area))])
+       (m/Divider)
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/Text "Flow kill switch: ")
+          (m/Switch
+            .value (= :on kill-switch)
+            .onChanged #(rd/dispatch [::model/flip-kill-switch (if % :on :off)]))])
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/OutlinedButton
+            .child (m/Text "Clear Flow")
+            .onPressed #(rd/dispatch [::model/clear-flow]))
+          (m/SizedBox .width 16)
+          (m/OutlinedButton
+            .child (m/Text "Register Flow")
+            .onPressed #(rd/dispatch [::model/reg-flow]))])])))

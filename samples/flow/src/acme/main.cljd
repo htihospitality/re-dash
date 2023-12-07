@@ -1,0 +1,35 @@
+(ns acme.main
+  (:require ["package:flutter/material.dart" :as m]
+            [cljd.flutter :as f]
+            [acme.view :as view]
+            [acme.model :as model]
+            [hti.re-dash.alpha :as rd]
+            [alandipert.kahn :as kahn]))
+
+(defn calc-area
+  [{:keys [w h]}]
+  ((fnil * 0 0) w h))
+
+(defn main []
+
+  (rd/register-defaults!)
+
+  (model/register!)
+
+  (await (rd/dispatch-sync [::model/init]))
+
+  ;; Register the Flow to calculate the area when either width or length changes
+  (rd/reg-flow model/area-flow)
+
+
+  (f/run
+    (m/MaterialApp
+      .title "Welcome to Flutter"
+      .theme (m/ThemeData .primarySwatch m.Colors/blue))
+    .home
+    (m/Scaffold
+      .appBar (m/AppBar
+                .title (m/Text "ClojureDart with a splash of re-dash")))
+    .body
+    m/Center
+    view/garage-calculator))
