@@ -1,16 +1,19 @@
 {:paths ["script"]
- :deps {}
+ :deps  {}
  :tasks
- {compile-tests {:doc "Compile tests"
-                 :task (shell (str "clojure -M:cljd:test compile "
-                                   "hti.re-dash-test"))}
+ {compile-tests {:doc      "Compile tests"
+                 :requires ([clojure.string :as s])
+                 :task (shell (s/join " "
+                                      ["clojure -M:cljd:test compile"
+                                       "hti.re-dash-test"
+                                       "hti.flows-test"]))}
 
-  test          {:doc "Run tests"
-                 :task (shell "flutter test")
-                 :depends [compile-tests]}
-  build         {:doc "Build the jar"
-                 :task (shell "clojure -T:build ci")
-                 :depends []}
-  deploy        {:doc "Deploy to clojars"
-                 :task (shell "clojure -T:build deploy")
-                 :depends []}}}
+  test   {:doc     "Run tests"
+          :task    (shell "flutter test")
+          :depends [compile-tests]}
+  build  {:doc     "Build the jar"
+          :task    (shell "clojure -T:build ci")
+          :depends []}
+  deploy {:doc     "Deploy to clojars"
+          :task    (shell "clojure -T:build deploy")
+          :depends []}}}

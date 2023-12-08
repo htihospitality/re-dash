@@ -1,4 +1,4 @@
-(ns hti.interceptors)
+(ns hti.re-dash.interceptors)
 
 (defn ->interceptor
   [id before after]
