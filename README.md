@@ -61,11 +61,11 @@ Then, add the `re-dash` dependency
 
 In the `samples` folder of this repository:
 
-| Online Demo | App | Description |
-| ----------- | :----: | :----------: |
+| Demo | App | Description |
+| ----------- | ------ | ------------ |
 | [Launch](https://htihospitality.github.io/re-dash/counter/build/web/) | `counter` | Shows an example of an incrementing counter when clicked. |
 | [Launch](https://htihospitality.github.io/re-dash/fetch/build/web/) | `fetch` | Shows an example of data fetching from an http endpoint, using effects. |
-| [Launch](https://htihospitality.github.io/re-dash/signals/build/web/) | `signals` | Same as 'samples/counter' but showing various subscription signals: single, vector & map. |
+| [Launch](https://htihospitality.github.io/re-dash/signals/build/web/) | `signals` | Same as `counter` but showing various subscription signals: single, vector & map. |
 | [Launch](https://htihospitality.github.io/re-dash/coeffects/build/web/) | `coeffects` | Shows an example of injecting coeffects into an event handler. |
 | [Launch](https://htihospitality.github.io/re-dash/local_storage/build/web/) | `local_storage` | Shows an example of how to initialize shared_preferences and inject values into event handlers using coeffects. |
 | [Launch](https://htihospitality.github.io/re-dash/flow/build/web/) | `flow` | (alpha) Shows an example of using [Flows](/doc/03-flows.md) to calculate a derived result of some calculation, in addition to Flow life-cycle controls. |
