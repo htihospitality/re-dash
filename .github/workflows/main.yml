@@ -54,7 +54,7 @@ jobs:
 
     strategy:
       matrix:
-        app: [coeffects, counter, event_queue, fetch, flow, local_storage, signals]
+        app: [coeffects, counter, fetch, flow, local_storage, signals]
 
     steps:
       - name: Checkout
