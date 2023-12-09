@@ -47,6 +47,7 @@ jobs:
     strategy:
       matrix:
         app: [counter]
+        # app: [coeffects, counter, event_queue, fetch, flow, local_storage, signals]
 
     steps:
       - name: Checkout
@@ -90,11 +91,47 @@ jobs:
 
     steps:
 
-      - name: Restore build output
+      - name: Restore coeffects build output
+        uses: actions/cache@v3
+        with:
+          path: samples/coeffects/build/web
+          key: samples-coeffects-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore counter build output
         uses: actions/cache@v3
         with:
           path: samples/counter/build/web
           key: samples-counter-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore event_queue build output
+        uses: actions/cache@v3
+        with:
+          path: samples/event_queue/build/web
+          key: samples-event_queue-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore fetch build output
+        uses: actions/cache@v3
+        with:
+          path: samples/fetch/build/web
+          key: samples-fetch-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore flow build output
+        uses: actions/cache@v3
+        with:
+          path: samples/flow/build/web
+          key: samples-flow-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore local_storage build output
+        uses: actions/cache@v3
+        with:
+          path: samples/local_storage/build/web
+          key: samples-local_storage-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore signals build output
+        uses: actions/cache@v3
+        with:
+          path: samples/signals/build/web
+          key: samples-signals-build-output-${{ github.RUN_NUMBER }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
