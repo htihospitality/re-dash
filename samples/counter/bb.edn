@@ -1,0 +1,9 @@
+{:paths ["script"]
+ :deps  {}
+ :tasks
+ {compile {:doc  "Compile app"
+           :task (shell "clojure -M:cljd compile")}
+
+  build {:doc  "Builds the deployable assets"
+         :task (shell "flutter build web --base-href=/re-dash/counter/build/web/")
+         :depends [compile]}}}

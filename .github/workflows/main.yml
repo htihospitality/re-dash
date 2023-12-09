@@ -8,12 +8,14 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
 
-  build:
+  test:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
 
@@ -22,8 +24,9 @@ jobs:
 
     - uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.13.8'
+        flutter-version: '3.16.2'
         channel: 'stable'
+        cache: true
 
     - name: Setup Clojure
       uses: DeLaGuardo/setup-clojure@11.0
@@ -32,4 +35,119 @@ jobs:
         bb: '1.3.179'
 
     - name: Test
-      run: bb test
+      run: set -o pipefail && bb test 2>&1 | tee test.log
+
+    - name: Assert Dynamic Warnings
+      run: |
+        if grep -q "DYNAMIC WARNING" test.log; then
+          echo "Please fix all cljd DYNAMIC WARNINGS!"
+          exit 1
+        fi
+
+
+
+  build:
+
+    needs: test
+
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        app: [coeffects, counter, fetch, flow, local_storage, signals]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Clojure
+        uses: DeLaGuardo/setup-clojure@11.0
+        with:
+          cli: '1.11.1.1208'
+          bb: '1.3.179'
+
+      - name: Cache build output
+        uses: actions/cache@v3
+        with:
+          path: samples/${{ matrix.app }}/build/web
+          key: samples-${{ matrix.app }}-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Build
+        run: |
+          flutter pub get
+          flutter create . --platforms=web
+          bb build
+        working-directory: samples/${{ matrix.app }}
+
+
+  deploy:
+
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      - name: Restore coeffects build output
+        uses: actions/cache@v3
+        with:
+          path: samples/coeffects/build/web
+          key: samples-coeffects-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore counter build output
+        uses: actions/cache@v3
+        with:
+          path: samples/counter/build/web
+          key: samples-counter-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore event_queue build output
+        uses: actions/cache@v3
+        with:
+          path: samples/event_queue/build/web
+          key: samples-event_queue-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore fetch build output
+        uses: actions/cache@v3
+        with:
+          path: samples/fetch/build/web
+          key: samples-fetch-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore flow build output
+        uses: actions/cache@v3
+        with:
+          path: samples/flow/build/web
+          key: samples-flow-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore local_storage build output
+        uses: actions/cache@v3
+        with:
+          path: samples/local_storage/build/web
+          key: samples-local_storage-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore signals build output
+        uses: actions/cache@v3
+        with:
+          path: samples/signals/build/web
+          key: samples-signals-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: 'samples'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v3
