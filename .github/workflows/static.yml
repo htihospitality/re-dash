@@ -47,7 +47,7 @@ jobs:
       - name: Build
         run: |
           flutter pub get
-          flutter create web
+          flutter create .
           bb build
         working-directory: samples/counter
 
