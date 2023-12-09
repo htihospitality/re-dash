@@ -35,7 +35,15 @@ jobs:
         bb: '1.3.179'
 
     - name: Test
-      run: bb test
+      run: set -o pipefail && bb test 2>&1 | tee test.log
+
+    - name: Assert Dynamic Warnings
+      run: |
+        if grep -q "DYNAMIC WARNING" test.log; then
+          echo "Please fix all cljd DYNAMIC WARNINGS!"
+          exit 1
+        fi
+
 
 
   build:
@@ -46,8 +54,7 @@ jobs:
 
     strategy:
       matrix:
-        app: [counter]
-        # app: [coeffects, counter, event_queue, fetch, flow, local_storage, signals]
+        app: [coeffects, counter, event_queue, fetch, flow, local_storage, signals]
 
     steps:
       - name: Checkout
