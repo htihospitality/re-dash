@@ -11,9 +11,9 @@ permissions:
 
 jobs:
 
-  build:
+  test:
 
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
 
@@ -34,3 +34,74 @@ jobs:
 
     - name: Test
       run: bb test
+
+
+  build:
+
+    needs: test
+
+    runs-on: ubuntu-22.04
+
+    strategy:
+      matrix:
+        app: [counter]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.16.2'
+          channel: 'stable'
+          cache: true
+
+      - name: Setup Clojure
+        uses: DeLaGuardo/setup-clojure@11.0
+        with:
+          cli: '1.11.1.1208'
+          bb: '1.3.179'
+
+      - name: Cache build output
+        uses: actions/cache@v3
+        with:
+          path: samples/${{ matrix.app }}/build/web
+          key: samples-${{ matrix.app }}-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Build
+        run: |
+          flutter pub get
+          flutter create .
+          bb build
+        working-directory: samples/${{ matrix.app }}
+
+
+  deploy:
+
+    needs: build
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    runs-on: ubuntu-22.04
+
+    steps:
+
+      - name: Restore build output
+        uses: actions/cache@v3
+        with:
+          path: samples/counter/build/web
+          key: samples-counter-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          path: 'samples/counter/build/web'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v3
