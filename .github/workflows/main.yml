@@ -102,7 +102,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          path: 'samples/counter/build/web'
+          path: 'samples'
 
       - name: Deploy to GitHub Pages
         id: deployment
