@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
 
@@ -71,7 +73,7 @@ jobs:
       - name: Build
         run: |
           flutter pub get
-          flutter create .
+          flutter create . --platforms=web
           bb build
         working-directory: samples/${{ matrix.app }}
 
