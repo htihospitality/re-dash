@@ -12,8 +12,6 @@ dependencies:
     sdk: flutter
   cupertino_icons: ^1.0.2
   http: ^1.0.0
-  re_dash:
-    path: .clojuredart/deps/9e731771ee44667e14d1ef770e035e356b959692944310a4eb0a6918f52e5a6c
 
 dev_dependencies:
   flutter_test:
