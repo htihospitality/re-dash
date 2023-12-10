@@ -19,7 +19,7 @@
       [(m/Icon m/Icons.info)
        (m/SizedBox .width 10)
        (m/Flexible
-         .child (m/Text "Shows an example of ordered event execution. Logged to console."))])))
+         .child (m/Text "Shows an example of ordered event execution during longer processing events & effects. Logged to console."))])))
 
 
 (def counter

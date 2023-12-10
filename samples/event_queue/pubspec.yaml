@@ -1,6 +1,6 @@
 name: event_queue
 
-description: Shows an example of ordered event execution
+description: Shows an example of ordered event execution during longer processing events & effects.
 
 version: 1.0.0+1
 
