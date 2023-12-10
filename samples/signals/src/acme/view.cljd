@@ -4,23 +4,49 @@
             [acme.model :as model]
             [hti.re-dash.core :as rd]))
 
+(def description
+  (f/widget
+    (m/Container
+      .padding (m/EdgeInsets.all 10)
+      .margin (m/EdgeInsets.all 20)
+      .decoration (m/BoxDecoration
+                    .border (m/Border.all .width 1)
+                    .borderRadius (m/BorderRadius.all (m/Radius.circular 20))))
+    (m/Row
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .crossAxisAlignment m/CrossAxisAlignment.center
+      .children
+      [(m/Icon m/Icons.info)
+       (m/SizedBox .width 10)
+       (m/Flexible
+         .child (m/Text "Same as the counter sample, but showing various subscription signals: single, vector & map. This demonstrates the subscription signal graph in action."))])))
+
 (def counter
+  (f/widget
+    m/Expanded
+    (m/Column
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .children
+      [(f/widget
+         :watch [current-count (rd/subscribe [::model/get-count])]
+         (m/Text (str "Showing a simple extractor: The count is: " current-count)))
+       (f/widget
+         :watch [current-count (rd/subscribe [::model/get-count-single])]
+         (m/Text (str "Showing a single signal: " current-count)))
+       (f/widget
+         :watch [current-count (rd/subscribe [::model/get-count-vec])]
+         (m/Text (str "Showing a vector of signals: " current-count)))
+       (f/widget
+         :watch [current-count (rd/subscribe [::model/get-count-map])]
+         (m/Text (str "Showing a map of signals: " current-count)))
+       (m/IconButton
+         .icon (m/Icon (m/Icons.add_circle_outline))
+         .onPressed #(rd/dispatch [::model/count]))
+       (m/Text "Click me to count!")])))
+
+(def view
   (m/Column
-   .mainAxisAlignment m/MainAxisAlignment.center
-   .children
-   [(f/widget
-      :watch [current-count (rd/subscribe [::model/get-count])]
-      (m/Text (str "Showing a simple extractor: The count is: " current-count)))
-    (f/widget
-      :watch [current-count (rd/subscribe [::model/get-count-single])]
-      (m/Text (str "Showing a single signal: " current-count)))
-    (f/widget
-      :watch [current-count (rd/subscribe [::model/get-count-vec])]
-      (m/Text (str "Showing a vector of signals: " current-count)))
-    (f/widget
-      :watch [current-count (rd/subscribe [::model/get-count-map])]
-      (m/Text (str "Showing a map of signals: " current-count)))
-    (m/IconButton
-     .icon (m/Icon (m/Icons.add_circle_outline))
-     .onPressed #(rd/dispatch [::model/count]))
-    (m/Text "Click me to count!")]))
+    .mainAxisAlignment m/MainAxisAlignment.center
+    .children
+    [description
+     counter]))

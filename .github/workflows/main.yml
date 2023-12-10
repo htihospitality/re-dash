@@ -54,7 +54,7 @@ jobs:
 
     strategy:
       matrix:
-        app: [coeffects, counter, fetch, flow, local_storage, signals]
+        app: [coeffects, counter, fetch, flow, local_storage, signals, event_queue]
 
     steps:
       - name: Checkout
@@ -139,6 +139,12 @@ jobs:
         with:
           path: samples/signals/build/web
           key: samples-signals-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore event_queue build output
+        uses: actions/cache@v3
+        with:
+          path: samples/event_queue/build/web
+          key: samples-event_queue-build-output-${{ github.RUN_NUMBER }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

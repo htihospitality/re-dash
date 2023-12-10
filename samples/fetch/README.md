@@ -1,6 +1,6 @@
 # fetch
 
-Shows an example of data fetching from an http endpoint, using effects
+Shows an example of data fetching from an HTTP endpoint, using effects. A spinner indicates that an HTTP request is in flight.
 
 ## Run the sample
 

@@ -4,10 +4,29 @@
             [acme.model :as model]
             [hti.re-dash.core :as rd]))
 
+(def description
+  (f/widget
+    (m/Container
+      .padding (m/EdgeInsets.all 10)
+      .margin (m/EdgeInsets.all 20)
+      .decoration (m/BoxDecoration
+                    .border (m/Border.all .width 1)
+                    .borderRadius (m/BorderRadius.all (m/Radius.circular 20))))
+    (m/Row
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .crossAxisAlignment m/CrossAxisAlignment.center
+      .children
+      [(m/Icon m/Icons.info)
+       (m/SizedBox .width 10)
+       (m/Flexible
+         .child (m/Text "Shows an example of data fetching from an HTTP endpoint, using effects. A spinner indicates that an HTTP request is in flight."))])))
+
+
 (def albums
   (f/widget
     :watch [albums (rd/subscribe [::model/get-albums])
             request-in-flight? (rd/subscribe [::model/get-request-in-flight])]
+    m/Expanded
     (m/Column
       .mainAxisAlignment m/MainAxisAlignment.center
       .children
@@ -19,3 +38,10 @@
        (m/ElevatedButton
          .child (m/Text "Refresh")
          .onPressed #(rd/dispatch [::model/refresh-albums]))])))
+
+(def view
+  (m/Column
+    .mainAxisAlignment m/MainAxisAlignment.center
+    .children
+    [description
+     albums]))

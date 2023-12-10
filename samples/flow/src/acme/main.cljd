@@ -24,7 +24,7 @@
 
   (f/run
     (m/MaterialApp
-      .title "Welcome to Flutter"
+      .title "flow"
       .theme (m/ThemeData .primarySwatch m.Colors/blue))
     .home
     (m/Scaffold
@@ -32,4 +32,4 @@
                 .title (m/Text "ClojureDart with a splash of re-dash")))
     .body
     m/Center
-    view/garage-calculator))
+    view/view))

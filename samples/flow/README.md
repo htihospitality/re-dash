@@ -1,6 +1,6 @@
 # flow
 
-Shows an example of a Flow's life-cycle, and subscribing to its derived result
+Shows an example of using Flows to calculate a derived result of some calculation, in addition to Flow life-cycle controls.
 
 ## Run the sample
 

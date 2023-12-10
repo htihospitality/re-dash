@@ -4,9 +4,27 @@
             [acme.model :as model]
             [hti.re-dash.core :as rd]))
 
+(def description
+  (f/widget
+    (m/Container
+      .padding (m/EdgeInsets.all 10)
+      .margin (m/EdgeInsets.all 20)
+      .decoration (m/BoxDecoration
+                    .border (m/Border.all .width 1)
+                    .borderRadius (m/BorderRadius.all (m/Radius.circular 20))))
+    (m/Row
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .crossAxisAlignment m/CrossAxisAlignment.center
+      .children
+      [(m/Icon m/Icons.info)
+       (m/SizedBox .width 10)
+       (m/Flexible
+         .child (m/Text "Shows an example of how to initialize shared_preferences and inject values into event handlers using coeffects."))])))
+
 (def tomorrow
   (f/widget
     :watch [some-value (rd/subscribe [::model/get-some-value :some-key])]
+    m/Expanded
     (m/Column
       .mainAxisAlignment m/MainAxisAlignment.center
       .children
@@ -19,3 +37,11 @@
          .onPressed #(rd/dispatch [::model/get-button-clicked]))
        (m/Text "---")
        (m/Text (str "From local-storage: " some-value))])))
+
+
+(def view
+  (m/Column
+    .mainAxisAlignment m/MainAxisAlignment.center
+    .children
+    [description
+     tomorrow]))

@@ -4,14 +4,41 @@
             [acme.model :as model]
             [hti.re-dash.core :as rd]))
 
+(def description
+  (f/widget
+    (m/Container
+      .padding (m/EdgeInsets.all 10)
+      .margin (m/EdgeInsets.all 20)
+      .decoration (m/BoxDecoration
+                    .border (m/Border.all .width 1)
+                    .borderRadius (m/BorderRadius.all (m/Radius.circular 20))))
+    (m/Row
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .crossAxisAlignment m/CrossAxisAlignment.center
+      .children
+      [(m/Icon m/Icons.info)
+       (m/SizedBox .width 10)
+       (m/Flexible
+         .child (m/Text "Shows an example of injecting coeffects into an event handler. The current time is injected as a coeffect, incremented, and logged to the console as an effect."))])))
+
+
 (def tomorrow
+  (f/widget
+    :watch [tomorrow (rd/subscribe [::model/get-tomorrow])]
+    m/Expanded
+    (m/Column
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .children
+      [(m/Text (str tomorrow))
+       (m/ElevatedButton
+         .child (m/Text "Calculate")
+         .onPressed #(rd/dispatch [::model/calc-tomorrow]))
+       (m/Text "Click me to calculate tomorrow at this time!")])))
+
+
+(def view
   (m/Column
     .mainAxisAlignment m/MainAxisAlignment.center
     .children
-    [(f/widget
-       :watch [tomorrow (rd/subscribe [::model/get-tomorrow])]
-       (m/Text (str tomorrow)))
-     (m/ElevatedButton
-       .child (m/Text "Calculate")
-       .onPressed #(rd/dispatch [::model/calc-tomorrow]))
-     (m/Text "Click me to calculate tomorrow at this time!")]))
+    [description
+     tomorrow]))

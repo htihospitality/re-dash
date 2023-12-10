@@ -10,12 +10,12 @@
 
   (f/run
     (m/MaterialApp
-     .title "Welcome to Flutter"
-     .theme (m/ThemeData .primarySwatch m.Colors/blue))
+      .title "counter"
+      .theme (m/ThemeData .primarySwatch m.Colors/blue))
     .home
     (m/Scaffold
-     .appBar (m/AppBar
-              .title (m/Text "ClojureDart with a splash of re-dash")))
+      .appBar (m/AppBar
+                .title (m/Text "ClojureDart with a splash of re-dash")))
     .body
     m/Center
-    view/counter))
+    view/view))

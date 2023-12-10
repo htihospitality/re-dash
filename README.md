@@ -63,12 +63,13 @@ In the `samples` folder of this repository:
 
 | Demo | App | Description |
 | ----------- | ------ | ------------ |
-| [Launch](https://htihospitality.github.io/re-dash/counter/build/web/) | `counter` | Shows an example of an incrementing counter when clicked. |
-| [Launch](https://htihospitality.github.io/re-dash/fetch/build/web/) | `fetch` | Shows an example of data fetching from an http endpoint, using effects. |
-| [Launch](https://htihospitality.github.io/re-dash/signals/build/web/) | `signals` | Same as `counter` but showing various subscription signals: single, vector & map. |
-| [Launch](https://htihospitality.github.io/re-dash/coeffects/build/web/) | `coeffects` | Shows an example of injecting coeffects into an event handler. |
+| [Launch](https://htihospitality.github.io/re-dash/counter/build/web/) | `counter` | Shows an example of an incrementing counter when clicked. An event is dispatched, counter incremented in app-db, and logging to console as an effect. |
+| [Launch](https://htihospitality.github.io/re-dash/fetch/build/web/) | `fetch` | Shows an example of data fetching from an HTTP endpoint, using effects. A spinner indicates that an HTTP request is in flight. |
+| [Launch](https://htihospitality.github.io/re-dash/signals/build/web/) | `signals` | Same as the counter sample, but showing various subscription signals: single, vector & map. This demonstrates the subscription signal graph in action. |
+| [Launch](https://htihospitality.github.io/re-dash/coeffects/build/web/) | `coeffects` | Shows an example of injecting coeffects into an event handler. The current time is injected as a coeffect, incremented, and logged to the console as an effect. |
 | [Launch](https://htihospitality.github.io/re-dash/local_storage/build/web/) | `local_storage` | Shows an example of how to initialize shared_preferences and inject values into event handlers using coeffects. |
 | [Launch](https://htihospitality.github.io/re-dash/flow/build/web/) | `flow` | (alpha) Shows an example of using [Flows](/doc/03-flows.md) to calculate a derived result of some calculation, in addition to Flow life-cycle controls. |
+| [Launch](https://htihospitality.github.io/re-dash/event_queue/build/web/) | `event_queue` | Shows an example of ordered event execution. Logged to console. |
 
 
 ## Quickstart

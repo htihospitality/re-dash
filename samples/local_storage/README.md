@@ -1,6 +1,6 @@
 # local-storage
 
-Shows an example of injecting a local-storage coeffect into an event handler
+Shows an example of how to initialize shared_preferences and inject values into event handlers using coeffects.
 
 For more info see: [coeffects](http://day8.github.io/re-frame/Coeffects/)
 

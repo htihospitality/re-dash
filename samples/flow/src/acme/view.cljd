@@ -4,6 +4,24 @@
             [acme.model :as model]
             [hti.re-dash.alpha :as rd]))
 
+(def description
+  (f/widget
+    (m/Container
+      .padding (m/EdgeInsets.all 10)
+      .margin (m/EdgeInsets.all 20)
+      .decoration (m/BoxDecoration
+                    .border (m/Border.all .width 1)
+                    .borderRadius (m/BorderRadius.all (m/Radius.circular 20))))
+    (m/Row
+      .mainAxisAlignment m/MainAxisAlignment.center
+      .crossAxisAlignment m/CrossAxisAlignment.center
+      .children
+      [(m/Icon m/Icons.info)
+       (m/SizedBox .width 10)
+       (m/Flexible
+         .child (m/Text "Shows an example of using Flows to calculate a derived result of some calculation, in addition to Flow life-cycle controls."))])))
+
+
 (def garage-calculator
   (f/widget
     :watch [width (rd/subscribe [::model/width :garage])
@@ -11,6 +29,7 @@
             area (rd/subscribe [::model/area :garage])
             kill-switch (rd/subscribe [::model/kill-switch])]
 
+    m/Expanded
     (m/Column
       .mainAxisAlignment m/MainAxisAlignment.center
       .children
@@ -57,3 +76,10 @@
           (m/OutlinedButton
             .child (m/Text "Register Flow")
             .onPressed #(rd/dispatch [::model/reg-flow]))])])))
+
+(def view
+  (m/Column
+    .mainAxisAlignment m/MainAxisAlignment.center
+    .children
+    [description
+     garage-calculator]))
