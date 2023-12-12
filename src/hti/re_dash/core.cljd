@@ -65,13 +65,18 @@
   (let [subscription-id (first query-vec)]
     (if-let [{:keys [signal-builder computation-fn]}
              (get @subscriptions subscription-id)]
-      (f/$ (computation-fn
-             (let [signals ((signal-builder subscribe) query-vec)]
-               (cond
-                 (vector? signals) (map #(f/<! %) signals)
-                 (map? signals)    (map->signals signals)
-                 :else             (f/<! signals)))
-             query-vec))
+      (f/$
+       (try
+         (computation-fn
+          (let [signals ((signal-builder subscribe) query-vec)]
+            (cond
+              (vector? signals) (map #(f/<! %) signals)
+              (map? signals)    (map->signals signals)
+              :else             (f/<! signals)))
+          query-vec)
+         (catch dynamic ex st
+           (println (str "Error while calculating subscription " subscription-id
+                         " - " ex "\n" st)))))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 (defn derefable-subscribe
@@ -82,13 +87,18 @@
   (let [subscription-id (first query-vec)]
     (if-let [{:keys [signal-builder computation-fn]}
              (get @subscriptions subscription-id)]
-      (atom (computation-fn
-              (let [signals ((signal-builder derefable-subscribe) query-vec)]
-                (cond
-                  (vector? signals) (map deref signals)
-                  (map? signals)    (derefable-map->signals signals)
-                  :else             @signals))
-              query-vec))
+      (atom
+       (try
+         (computation-fn
+          (let [signals ((signal-builder derefable-subscribe) query-vec)]
+            (cond
+              (vector? signals) (map deref signals)
+              (map? signals)    (derefable-map->signals signals)
+              :else             @signals))
+          query-vec)
+         (catch dynamic ex st
+           (println (str "Error while calculating subscription " subscription-id
+                         " - " ex "\n" st)))))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 (defn build-sub-map
