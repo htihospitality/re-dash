@@ -1,7 +1,7 @@
 (ns hti.re-dash-test
   (:require ["dart:async" :as da]
             [clojure.test :refer [deftest is testing use-fixtures]]
-            [cljd.flutter :as f]
+            [clojure.string :as str]
             [hti.re-dash.core :as rd]
             [hti.re-dash.testing.core :as rd-testing]))
 
@@ -227,6 +227,19 @@
 
   (is (= "ab" @(rd-testing/subscribe [:ab]))))
 
+(deftest error-in-subscription
+  (rd/reg-sub
+   :error
+   (fn [_ _]
+     (throw (Exception. "This exception is part of a test case, and can be safely ignored."))))
+
+  (is (= nil @(rd-testing/subscribe [:error])))
+
+  (is (= "Error while calculating subscription :error - Exception: This exception is part of a test case, and can be safely ignored."
+         (-> (with-out-str
+               @(rd-testing/subscribe [:error]))
+             (str/split "\n")
+             (first)))))
 
 ;; Events
 
