@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.9.1 - 2023-12-12
+### Changes
+- Added logging to report errors that occur while calculating subscription [PR 28](https://github.com/htihospitality/re-dash/pull/28)
+
 ## 0.9.0 - 2023-12-07
 ### Changes
 - Added support for [Flows](/doc/03-flows.md) (alpha) [PR 25](https://github.com/htihospitality/re-dash/pull/25)
