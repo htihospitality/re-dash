@@ -1,0 +1,16 @@
+(ns hti.re-dash.database
+  (:require [hti.re-dash.database.impl.app-db :as app-db]
+            [hti.re-dash.database.protocol :as proto]))
+
+
+(defonce impl (atom (app-db/AppDB.)))
+
+
+(defn register!
+  "Optionally register a different database implementation to use.
+  The default is the standard Map Atom."
+  [{:keys [db-impl] :as args}]
+
+  (reset! impl db-impl)
+
+  (proto/init! db-impl args))

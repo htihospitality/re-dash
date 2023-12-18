@@ -1,0 +1,49 @@
+(ns hti.re-dash.database.impl.app-db
+  (:require [hti.re-dash.database.protocol :as protocol]
+            [cljd.flutter :as f]))
+
+;; The default app-db.
+;; Do not access directly from application code.
+;; Access is only permitted via events and subscriptions.
+
+(defonce ^:private app-db (atom {}))
+
+
+(defn- map->signals
+  [signals]
+  (->> (map (fn [[k v]]
+              {k (f/<! v)})
+            signals)
+       (into {})))
+
+(deftype AppDB []
+  protocol/Database
+
+  (init!
+    [_ _])
+
+  (mutate!
+    [_ db]
+    (reset! app-db db))
+
+  (subscribe
+    [_ signals computation-fn query-vec]
+    (f/$
+      (try
+        (computation-fn
+          (cond
+            (vector? signals) (map #(f/<! %) signals)
+            (map? signals)    (map->signals signals)
+            :else             (f/<! signals))
+          query-vec)
+        (catch dynamic ex st
+               (println (str "Error while calculating subscription " (first query-vec)
+                             " - " ex "\n" st))))))
+
+  (ref
+    [_]
+    app-db)
+
+  (val
+    [_]
+    @app-db))

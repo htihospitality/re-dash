@@ -6,19 +6,13 @@
             [clojure.data :as data]
             [hti.re-dash.debugging :as debugging]
             [hti.re-dash.interceptors :as interceptors]
-            [hti.re-dash.app-db :as app-db]))
+            [hti.re-dash.database.protocol :as proto]
+            [hti.re-dash.database :as db]))
 
 
 ;; Subscriptions
 
 (defonce ^:private subscriptions (atom {}))
-
-(defn- map->signals
-  [signals]
-  (->> (map (fn [[k v]]
-              {k (f/<! v)})
-            signals)
-       (into {})))
 
 (defn- derefable-map->signals
   "Same as map->signals but used in tests, see derefable-subscribe"
@@ -65,18 +59,12 @@
   (let [subscription-id (first query-vec)]
     (if-let [{:keys [signal-builder computation-fn]}
              (get @subscriptions subscription-id)]
-      (f/$
-       (try
-         (computation-fn
-          (let [signals ((signal-builder subscribe) query-vec)]
-            (cond
-              (vector? signals) (map #(f/<! %) signals)
-              (map? signals)    (map->signals signals)
-              :else             (f/<! signals)))
-          query-vec)
-         (catch dynamic ex st
-           (println (str "Error while calculating subscription " subscription-id
-                         " - " ex "\n" st)))))
+
+      (proto/subscribe @db/impl
+                       ((signal-builder subscribe) query-vec)
+                       computation-fn
+                       query-vec)
+
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 (defn derefable-subscribe
@@ -90,7 +78,7 @@
       (atom
        (try
          (computation-fn
-          (let [signals ((signal-builder derefable-subscribe) query-vec)]
+           (let [signals ((signal-builder derefable-subscribe) query-vec)]
             (cond
               (vector? signals) (map deref signals)
               (map? signals)    (derefable-map->signals signals)
@@ -128,8 +116,9 @@
         (case (count input-args)
           0 (fn [_]
               (fn app-db-subscription
-                ([_] app-db/app-db)
-                ([_ _] app-db/app-db)))
+
+                ([_] (proto/ref @db/impl))
+                ([_ _] (proto/ref @db/impl))))
           1 (let [input-fn (first input-args)]
               (if (fn? input-fn)
                 (fn [_] input-fn)
@@ -232,7 +221,7 @@
 
   ;; Do :db effect first
   (when-let [db (:db effects)]
-    (reset! app-db/app-db db))
+    (proto/mutate! @db/impl db))
 
   ;; Do other effects
   (doseq [effect-id (-> effects (dissoc :db) keys)]
@@ -325,7 +314,7 @@
   (->interceptor :re-dash/prime-cofx
                  (fn [context]
                    (assoc context :coeffects {:event event-vec
-                                              :db    @app-db/app-db}))
+                                              :db    (proto/val @db/impl)}))
                  nil))
 
 (defn inject-cofx
@@ -350,7 +339,8 @@
                               #(get-in % (flatten args))))
                  (fn [context]
                    (update-in context [:effects :db]
-                              #(assoc-in @app-db/app-db (flatten args) %)))))
+                              #(assoc-in (proto/val @db/impl) (flatten args) %)))))
+
 
 
 

@@ -1,0 +1,91 @@
+(ns hti.re-dash.database.impl.rx-db
+  (:require ["package:rxdb/rxdb.dart" :as rxdb]
+            [hti.re-dash.database.protocol :as protocol]))
+
+
+(defonce ^:private rx-db (atom nil))
+
+
+(defn ->collection
+  "Returns a RxCollection on the given db"
+  [^rxdb/RxDatabase db coll-name]
+  (.getCollection db coll-name))
+
+
+(defn ->query
+  "Returns a RxQuery on the given collection and selector.
+  The RxQuery can be used to exec or observe."
+  [db coll-name selector]
+  (-> ^rxdb/RxCollection (->collection db coll-name)
+      (.find selector)))
+
+
+(defn doc->map
+  "Transforms a RxDocument into a Clojure map"
+  [doc]
+  (when doc
+    (->> (.-data ^rxdb/RxDocument doc)
+         (into {}))))
+
+(defn insert!
+  [db coll-name data]
+  (-> ^rxdb/RxCollection (->collection db coll-name)
+      (.insert data)))
+
+(defn update!
+  "RxDB for Flutter does not yet support an Update of an existing document,
+  only an Insert of a new document into the collection.
+
+  This function inserts a new document into the collection by applying f
+  to field on the last document in the collection.
+
+  (effectively we're emulating Update as we only ever use the last document in the
+  collection to represent the current app state)
+
+  !! Beware, this will result in a continuously growing database, therefore this RxDB
+  adaptor is experimental and not suitable for production use !!"
+  [field f coll-name db]
+  (let [coll ^rxdb/RxCollection (->collection db coll-name)
+        doc  (-> (.find coll {})
+                 .exec
+                 await
+                 last)
+        data (doc->map doc)
+        val (get data field)]
+
+    (->> (merge data
+                {"id"  (str (DateTime/now))
+                 field ((fnil f 0) val)})
+         (.insert coll))))
+
+
+(deftype RxDB []
+  protocol/Database
+
+  (init!
+    [_ {:keys [name]}]
+    (reset! rx-db
+            (await
+              (rxdb/getRxDatabase "javascript/dist/index.js" name))))
+
+
+  (mutate!
+    [_ db-fn]
+    (when @rx-db
+      (db-fn @rx-db)))
+
+
+  (subscribe
+    [_ signals computation-fn query-vec]
+    (.$
+      ^rxdb/RxQuery (computation-fn signals query-vec)))
+
+
+  (ref
+    [_]
+    @rx-db)
+
+
+  (val
+    [_]
+    @rx-db))

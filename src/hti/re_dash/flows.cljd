@@ -1,9 +1,10 @@
 (ns hti.re-dash.flows
   (:require [hti.re-dash.interceptors :as interceptors]
-            [hti.re-dash.app-db :as app-db]
             [alandipert.kahn :as kahn]
             [cljd.flutter :as f]
-            [hti.re-dash.utils :as utils]))
+            [hti.re-dash.utils :as utils]
+            [hti.re-dash.database.protocol :as proto]
+            [hti.re-dash.database :as db]))
 
 (defonce ^:private flows (atom {:definitions {}
                                 :sorted-ids  []}))
@@ -114,7 +115,7 @@
     :re-dash/flow
     (fn [{{db :db} :effects
           :as      context}]
-      (let [old-db                           @app-db/app-db
+      (let [old-db                           (proto/val @db/impl)
             {:keys [definitions sorted-ids]} @flows]
         (assoc-in context [:effects :db]
                   (reduce (fn [new-db flow-id]
@@ -203,7 +204,7 @@
 
      ;; Run the flow for the first time (::initialize)
      ;; If flow with same ID already exists, first run its cleanup
-     (swap! app-db/app-db
+     (swap! (proto/ref @db/impl)
             #(-> {:flow        new-flow
                   :new-db      (if old-flow (cleanup-fn % (:path old-flow)) %)
                   :definitions definitions}
@@ -225,7 +226,7 @@
                         (remove #(#{flow-id} %)
                                 sorted-ids)))
 
-             (swap! app-db/app-db
+             (swap! (proto/ref @db/impl)
                     #(exec-flow-action {:action      ::cleanup
                                         :flow        flow
                                         :new-db      %
@@ -242,9 +243,9 @@
 (defn subscribe
   [query-vec]
   (let [path (path query-vec)]
-    (f/$ (get-in (f/<! app-db/app-db) path))))
+    (f/$ (get-in (f/<! (proto/ref @db/impl)) path))))
 
 (defn derefable-subscribe
   [query-vec]
   (let [path (path query-vec)]
-    (atom (get-in @app-db/app-db path))))
+    (atom (get-in (proto/val @db/impl) path))))
