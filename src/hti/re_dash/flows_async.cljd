@@ -1,0 +1,149 @@
+(ns hti.re-dash.flows-async
+  "Tries to delegate to hti.re-dash.flows where possible.
+  Overrides certain functions to support async where needed.
+  Does not follow the interceptor chain, instead, flows gets
+  executed after database mutation completed."
+  (:require [hti.re-dash.interceptors :as interceptors]
+            [alandipert.kahn :as kahn]
+            [cljd.flutter :as f]
+            [hti.re-dash.utils :as utils]
+            [hti.re-dash.database.protocol :as proto]
+            [hti.re-dash.database :as db]
+            [hti.re-dash.flows :as flows]))
+
+(defn- resolve-inputs
+  "Resolves the flow inputs to their current values in app-db
+  If no inputs supplied we return the db instead"
+  [inputs _definitions db]
+  (if inputs
+    (->> (map (fn [[input-key input-path]]
+                {input-key (dart/async-barrier (await (input-path)))})
+              inputs)
+         (into {}))
+    db))
+
+
+(defn test-flow-alive?
+  "Tests whether the Flow was live? and is currently live?.
+
+  It does this by applying the supplied live? function on the
+  resolved input paths.
+
+  If there are no live-inputs supplied, live? gets applied on db instead"
+  [{:keys [flow old-db new-db definitions] :as args}]
+  (let [{:keys [live? live-inputs]
+         :or   {live? (constantly true)}} flow]
+    (assoc args
+           :old-flow-live? (-> (resolve-inputs live-inputs definitions old-db) live? await)
+           :new-flow-live? (-> (resolve-inputs live-inputs definitions new-db) live? await))))
+
+(defn cleanup-fn
+  "TODO - Provide a default"
+  [db _path]
+  db)
+
+(defn exec-flow-action
+  [{:keys [flow action new-db old-db definitions new-flow-live?]}]
+
+  (let [{:keys [inputs output path cleanup]
+         :or   {cleanup cleanup-fn
+                output  identity}}
+        flow]
+
+    (condp = action
+
+      :re-dash/none
+      new-db
+
+      :re-dash/cleanup
+      (cleanup new-db path)
+
+      :re-dash/initialize
+      (if new-flow-live?
+        (->> (resolve-inputs inputs definitions new-db)
+             output
+             await
+             path)
+        new-db)
+
+      :re-dash/output
+      ;; TODO
+      ;; Only call output fn if old and new resolved inputs are different.
+      (-> (resolve-inputs inputs definitions new-db)
+          output
+          await
+          path))))
+
+(defn reg-flow
+
+  ([flow]
+   (reg-flow (:id flow) flow))
+
+  ([flow-id {:keys [inputs] :as flow}]
+   (when-not flow-id (throw (ex-info "id is required" flow)))
+
+   (let [{definitions :definitions}
+         @flows/flows
+
+         old-flow
+         (flow-id definitions)
+
+         new-flow
+         (assoc flow
+                :id flow-id
+                :graph (flows/inputs->graph flow-id inputs))]
+
+     ;; Register the flow definition
+     (swap! flows/flows #(flows/->sorted-flows % new-flow))
+
+     ;; If flow with same ID already exists, first run its cleanup
+     (when old-flow
+       (exec-flow-action {:action      :re-dash/cleanup
+                          :flow        old-flow
+                          :new-db      #()
+                          :definitions definitions}))
+
+     ;; Run the flow for the first time (:re-dash/initialize)
+     (-> {:flow        new-flow
+          :new-db      #()
+          :definitions definitions}
+         test-flow-alive?
+         await
+         (assoc :action :re-dash/initialize)
+         exec-flow-action))))
+
+
+(defn clear-flow!
+  "Called from the :clear-flow effect.
+  Clear the flow registration and run its cleanup."
+  [flow-id]
+  (swap! flows/flows
+         (fn [{:keys [definitions sorted-ids] :as flows}]
+           (let [flow (flows/get-flow flow-id definitions)]
+
+             (-> (update flows :definitions dissoc flow-id)
+                 (assoc :sorted-ids
+                        (remove #(#{flow-id} %)
+                                sorted-ids)))
+
+             (exec-flow-action {:action      :re-dash/cleanup
+                                :flow        flow
+                                :new-db      #()
+                                :definitions definitions})))))
+
+(defn run-flows!
+  "Run all Flows"
+  []
+  (let [old-db                           (proto/val @db/impl)
+        {:keys [definitions sorted-ids]} @flows/flows]
+    (doseq [flow-id sorted-ids]
+
+      (-> {:flow        (flows/get-flow flow-id definitions)
+           :definitions definitions
+           :new-db      #()
+           :old-db      old-db}
+
+          test-flow-alive?
+          await
+          flows/calc-flow-action
+          exec-flow-action))))

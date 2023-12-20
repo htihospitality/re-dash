@@ -1,6 +1,8 @@
 (ns hti.re-dash.database.impl.rx-db
   (:require ["package:rxdb/rxdb.dart" :as rxdb]
-            [hti.re-dash.database.protocol :as protocol]))
+            [hti.re-dash.database.protocol :as protocol]
+            [hti.re-dash.flows :as flows]
+            [hti.re-dash.flows-async :as flows-async]))
 
 
 (defonce ^:private rx-db (atom nil))
@@ -19,7 +21,6 @@
   (-> ^rxdb/RxCollection (->collection db coll-name)
       (.find selector)))
 
-
 (defn doc->map
   "Transforms a RxDocument into a Clojure map"
   [doc]
@@ -27,12 +28,23 @@
     (->> (.-data ^rxdb/RxDocument doc)
          (into {}))))
 
+(defn query-field
+  "Returns the field value in the last document in the collection
+  coll-name (the last document is used as the AppState)"
+  [field coll-name]
+  (-> (->query @rx-db coll-name {})
+      .exec
+      await
+      last
+      doc->map
+      (get field)))
+
 (defn insert!
-  [db coll-name data]
-  (-> ^rxdb/RxCollection (->collection db coll-name)
+  [coll-name data]
+  (-> ^rxdb/RxCollection (->collection @rx-db coll-name)
       (.insert data)))
 
-(defn update!
+(defn update-field!
   "RxDB for Flutter does not yet support an Update of an existing document,
   only an Insert of a new document into the collection.
 
@@ -44,8 +56,8 @@
 
   !! Beware, this will result in a continuously growing database, therefore this RxDB
   adaptor is experimental and not suitable for production use !!"
-  [field f coll-name db]
-  (let [coll ^rxdb/RxCollection (->collection db coll-name)
+  [field f coll-name]
+  (let [coll ^rxdb/RxCollection (->collection @rx-db coll-name)
         doc  (-> (.find coll {})
                  .exec
                  await
@@ -70,9 +82,11 @@
 
 
   (mutate!
-    [_ db-fn]
+    [_ db-fns]
     (when @rx-db
-      (db-fn @rx-db)))
+      (doseq [f db-fns]
+        (f)
+        (flows-async/run-flows!))))
 
 
   (subscribe
@@ -80,6 +94,9 @@
     (.$
       ^rxdb/RxQuery (computation-fn signals query-vec)))
 
+  (flows-async?
+    [_]
+    true)
 
   (ref
     [_]

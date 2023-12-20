@@ -7,6 +7,7 @@
             [hti.re-dash.debugging :as debugging]
             [hti.re-dash.interceptors :as interceptors]
             [hti.re-dash.flows :as flows]
+            [hti.re-dash.flows-async :as flows-async]
             [hti.re-dash.database.protocol :as proto]
             [hti.re-dash.database :as db]))
 
@@ -370,7 +371,9 @@
    (reg-flow (:id flow) flow))
 
   ([flow-id flow]
-   (flows/reg-flow flow-id flow)))
+   (if (proto/flows-async? @db/impl)
+     (flows-async/reg-flow flow-id flow)
+     (flows/reg-flow flow-id flow))))
 
 
 ;; Events Queue
@@ -412,7 +415,8 @@
                    (prime-cofx-interceptor event-vec)]
                   @global-interceptors
                   interceptors
-                  [flows/flow-interceptor])]
+                  (when-not (proto/flows-async? @db/impl)
+                    [flows/flow-interceptor]))]
 
       (when-not registered-event
         (throw (Exception. (str "Event not found: " event-id))))
@@ -606,9 +610,13 @@
   (reg-fx
     :reg-flow
     (fn [flow]
-      (flows/reg-flow flow)))
+      (if (proto/flows-async? @db/impl)
+        (flows-async/reg-flow flow)
+        (flows/reg-flow flow))))
 
   (reg-fx
     :clear-flow
     (fn [flow-id]
-      (flows/clear-flow! flow-id))))
+      (if (proto/flows-async? @db/impl)
+        (flows-async/clear-flow! flow-id)
+        (flows/clear-flow! flow-id)))))

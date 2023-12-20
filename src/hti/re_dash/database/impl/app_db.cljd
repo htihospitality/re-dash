@@ -40,6 +40,10 @@
                (println (str "Error while calculating subscription " (first query-vec)
                              " - " ex "\n" st))))))
 
+  (flows-async?
+    [_]
+    false)
+
   (ref
     [_]
     app-db)

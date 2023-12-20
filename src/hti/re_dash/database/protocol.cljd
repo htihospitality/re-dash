@@ -16,6 +16,10 @@
     [_ signals computation-fn query-vec]
     "Subscribes to some observable of database state (atom, stream etc.)")
 
+  (flows-async?
+    [_]
+    "Whether this database backend requires async Flow support")
+
   (ref
     [_]
     "Returns the reference to the database subscribable")

@@ -6,12 +6,12 @@
             [hti.re-dash.database.protocol :as proto]
             [hti.re-dash.database :as db]))
 
-(defonce ^:private flows (atom {:definitions {}
-                                :sorted-ids  []}))
+(defonce flows (atom {:definitions {}
+                      :sorted-ids  []}))
 
 (def ^:private flow? map?)
 
-(defn- get-flow
+(defn get-flow
   [flow-id definitions]
   (or (flow-id definitions)
       (throw (Exception. (str "Flow not found: " flow-id)))))
@@ -61,17 +61,17 @@
 
            (and old-flow-live?
                 new-flow-live?)
-           ::output
+           :re-dash/output
 
            (and (not old-flow-live?)
                 new-flow-live?)
-           ::initialize
+           :re-dash/initialize
 
            (and old-flow-live?
                 (not new-flow-live?))
-           ::cleanup
+           :re-dash/cleanup
 
-           :else ::none)))
+           :else :re-dash/none)))
 
 (defn cleanup-fn
   "Default cleanup function that dissocs path
@@ -89,20 +89,20 @@
 
     (condp = action
 
-      ::none
+      :re-dash/none
       new-db
 
-      ::cleanup
+      :re-dash/cleanup
       (cleanup new-db path)
 
-      ::initialize
+      :re-dash/initialize
       (if new-flow-live?
         (->> (resolve-inputs inputs definitions new-db)
              output
              (assoc-in new-db path))
         new-db)
 
-      ::output
+      :re-dash/output
       (->> [new-db old-db]
            (map #(resolve-inputs inputs definitions %))
            ((fn [[new-resolved-inputs old-resolved-inputs]]
@@ -134,7 +134,7 @@
     nil))
 
 
-(defn- sort-flow-ids
+(defn sort-flow-ids
   "Sort all Flow definition dependency graphs
   using Khan's topological sorting algorithm"
   [definitions flow-id]
@@ -147,7 +147,7 @@
       (throw (ex-info "Cyclic dependency detected when registering Flow"
                       {:flow-id flow-id}))))
 
-(defn- inputs->graph
+(defn inputs->graph
   "Returns a dependency graph between the flow & its inputs
 
   for example this flow definition:
@@ -171,7 +171,7 @@
             inputs)
        (apply merge-with into {})))
 
-(defn- ->sorted-flows
+(defn ->sorted-flows
   "Adds a new Flow definition and sort all the Flow IDs"
   [{:keys [definitions]}
    {:keys [id] :as flow}]
@@ -209,7 +209,7 @@
                   :new-db      (if old-flow (cleanup-fn % (:path old-flow)) %)
                   :definitions definitions}
                  test-flow-alive?
-                 (assoc :action ::initialize)
+                 (assoc :action :re-dash/initialize)
                  exec-flow-action)))))
 
 
@@ -227,7 +227,7 @@
                                 sorted-ids)))
 
              (swap! (proto/ref @db/impl)
-                    #(exec-flow-action {:action      ::cleanup
+                    #(exec-flow-action {:action      :re-dash/cleanup
                                         :flow        flow
                                         :new-db      %
                                         :definitions definitions}))))))

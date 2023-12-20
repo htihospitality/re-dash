@@ -2,7 +2,7 @@
   (:require ["package:flutter/material.dart" :as m]
             [cljd.flutter :as f]
             [acme.model :as model]
-            [hti.re-dash.core :as rd]
+            [hti.re-dash.alpha :as rd]
             [hti.re-dash.database.impl.rx-db :as rx]))
 
 (def description
@@ -27,7 +27,7 @@
   (f/widget
     :watch [docs (rd/subscribe [::model/app-state {}])]
 
-    :let [{:strs [width length killSwitch]}
+    :let [{:strs [width length area killSwitch]}
           (-> docs last rx/doc->map)
 
           kill-switch (if killSwitch :on :off)]
@@ -60,10 +60,26 @@
        (m/Row
          .mainAxisAlignment m/MainAxisAlignment.center
          .children
-         [(m/Text "Toggle some boolean global state: ")
+         [(m/Text (str "Area (derived value from Flow): " area))])
+       (m/Divider)
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/Text "Flow kill switch:")
           (m/Switch
             .value (= :on kill-switch)
-            .onChanged #(rd/dispatch [::model/flip-kill-switch (if % :on :off)]))])])))
+            .onChanged #(rd/dispatch [::model/flip-kill-switch (if % :on :off)]))])
+       (m/SizedBox .height 8)
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/OutlinedButton
+            .child (m/Text "Clear Flow")
+            .onPressed #(rd/dispatch [::model/clear-flow]))
+          (m/SizedBox .width 16)
+          (m/OutlinedButton
+            .child (m/Text "Register Flow")
+            .onPressed #(rd/dispatch [::model/reg-flow]))])])))
 
 (def view
   (m/Column

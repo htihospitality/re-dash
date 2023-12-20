@@ -3,7 +3,7 @@
             [cljd.flutter :as f]
             [acme.view :as view]
             [acme.model :as model]
-            [hti.re-dash.core :as rd]
+            [hti.re-dash.alpha :as rd]
             [alandipert.kahn :as kahn]
             [hti.re-dash.database :as db]
             [hti.re-dash.database.impl.rx-db :as rx-db]))
@@ -25,6 +25,8 @@
 
   (await (rd/dispatch-sync [::model/init]))
 
+  ;; Register the Flow to calculate the area when either width or length changes
+  (rd/reg-flow model/area-flow)
 
   (f/run
     (m/MaterialApp
