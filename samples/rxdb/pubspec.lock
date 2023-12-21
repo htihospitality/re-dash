@@ -202,10 +202,11 @@ packages:
   rxdb:
     dependency: "direct main"
     description:
-      path: "javascript/node_modules/rxdb/src/plugins/flutter/dart"
-      relative: true
-    source: path
-    version: "0.0.1"
+      name: rxdb
+      sha256: "27a7a72ed639dc05e60cf7ae38b4c15263d281aa950057347121de5956ae6187"
+      url: "https://pub.dev"
+    source: hosted
+    version: "15.0.0-beta.31"
   shared_preferences:
     dependency: transitive
     description:

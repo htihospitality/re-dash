@@ -11,8 +11,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  rxdb:
-    path: javascript/node_modules/rxdb/src/plugins/flutter/dart
+  rxdb: ^15.0.0-beta.31
 
 dev_dependencies:
   flutter_test:

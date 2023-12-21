@@ -49,11 +49,7 @@ cd $HOME/src/rxdb/examples/flutter/javascript
 
 npm run preinstall && npm run build
 
-## Copy back the compiled dart node package and dist folder
-
-mkdir -p $HOME/src/re-dash/samples/rxdb/javascript/node_modules/rxdb/src/plugins/flutter/dart
-
-cp -r $HOME/src/rxdb/examples/flutter/javascript/node_modules/rxdb/src/plugins/flutter/dart $HOME/src/re-dash/samples/rxdb/javascript/node_modules/rxdb/src/plugins/flutter
+## Copy back the compiled dist folder
 
 mkdir -p $HOME/src/re-dash/samples/rxdb/javascript/dist
 
