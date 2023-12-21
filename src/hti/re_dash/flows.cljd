@@ -235,17 +235,18 @@
 (defn- path
   [query-vec]
   (let [flow-id (-> query-vec second :id)]
-
     (-> flow-id
         (get-flow (:definitions @flows))
         :path)))
 
 (defn subscribe
   [query-vec]
-  (let [path (path query-vec)]
-    (f/$ (get-in (f/<! (proto/ref @db/impl)) path))))
+  (->> query-vec
+       path
+       (proto/subscribe-flow @db/impl)))
 
 (defn derefable-subscribe
   [query-vec]
-  (let [path (path query-vec)]
-    (atom (get-in (proto/val @db/impl) path))))
+  (->> query-vec
+       path
+       (proto/derefable-subscribe-flow @db/impl)))

@@ -16,6 +16,14 @@
     [_ signals computation-fn query-vec]
     "Subscribes to some observable of database state (atom, stream etc.)")
 
+  (subscribe-flow
+    [_ query-vec]
+    "Subscribes to a Flow's output path")
+
+  (derefable-subscribe-flow
+    [_ query-vec]
+    "Subscribes to a Flow's output path (non reactive)")
+
   (flows-async?
     [_]
     "Whether this database backend requires async Flow support")

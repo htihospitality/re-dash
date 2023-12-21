@@ -32,7 +32,7 @@
   "Returns the field value in the last document in the collection
   coll-name (the last document is used as the AppState)"
   [field coll-name]
-  (-> (->query @rx-db coll-name {})
+  (-> ^rxdb/RxQuery (->query @rx-db coll-name {})
       .exec
       await
       last
@@ -62,8 +62,8 @@
         data (doc->map doc)
         val (get data field)]
 
-    ;; Delete the existing doc used as app state
-    (.remove doc)
+    ;; Clean up old doc
+    (.remove ^rxdb/RxDocument doc)
 
     (->> (merge data
                 {"id"  (str (DateTime/now))
@@ -93,6 +93,15 @@
     [_ signals computation-fn query-vec]
     (.$
       ^rxdb/RxQuery (computation-fn signals query-vec)))
+
+  (subscribe-flow
+    [_ _path]
+    (throw (ex-info "Subscribing to a Flow is not supported yet via RxDB" {})))
+
+
+  (derefable-subscribe-flow
+    [_ _path]
+    (throw (ex-info "Subscribing to a Flow is not supported yet via RxDB" {})))
 
   (flows-async?
     [_]
