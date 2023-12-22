@@ -25,12 +25,10 @@
 
 (def garage-calculator
   (f/widget
-    :watch [docs (rd/subscribe [::model/app-state {}])]
-
-    :let [{:strs [width length area killSwitch]}
-          (-> docs last rx/doc->map)
-
-          kill-switch (if killSwitch :on :off)]
+    :watch [width (rd/subscribe [::model/width])
+            length (rd/subscribe [::model/length])
+            area (rd/subscribe [::model/area])
+            kill-switch (rd/subscribe [::model/kill-switch])]
 
     m/Expanded
     (m/Column

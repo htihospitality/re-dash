@@ -28,6 +28,13 @@
     (->> (.-data ^rxdb/RxDocument doc)
          (into {}))))
 
+(defn field
+  "Gets a field out of a RxDocument"
+  [doc field]
+  (-> doc
+      doc->map
+      (get field)))
+
 (defn query-field
   "Returns the field value in the last document in the collection
   coll-name (the last document is used as the AppState)"
@@ -91,8 +98,19 @@
 
   (subscribe
     [_ signals computation-fn query-vec]
-    (.$
-      ^rxdb/RxQuery (computation-fn signals query-vec)))
+    (let [s (cond
+
+              ;; TODO for multi stream signals maybe rxdart/ForkJoinStream ??
+              (vector? signals) (first signals)
+
+              :else             signals)]
+
+      (cond
+        (dart/is? s rxdb/RxDatabase)
+        (.$ (computation-fn s query-vec))
+
+        (dart/is? s Stream)
+        (.asyncMap s #(computation-fn % query-vec)))))
 
   (subscribe-flow
     [_ _path]

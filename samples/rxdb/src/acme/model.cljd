@@ -33,9 +33,33 @@
       (rx/->query db coll-name selector)))
 
   (rd/reg-sub
+    ::width
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[doc] _]
+      (rx/field doc "width")))
+
+  (rd/reg-sub
+    ::length
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[doc] _]
+      (rx/field doc "length")))
+
+  (rd/reg-sub
     ::area
-    (fn [db [_ room]]
-      (get-in db [room :area])))
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[doc] _]
+      (rx/field doc "area")))
+
+  (rd/reg-sub
+    ::kill-switch
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[doc] _]
+      (if (true? (rx/field doc "killSwitch"))
+        :on :off)))
 
   (rd/reg-event-db
     ::inc-w
