@@ -384,7 +384,7 @@
                               #(get-in % (flatten args))))
                  (fn [context]
                    (update-in context [:effects :db]
-                              #(assoc-in (:db @databases) (flatten args) %)))))
+                              #(assoc-in (proto/val (:db @databases)) (flatten args) %)))))
 
 
 

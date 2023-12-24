@@ -6,7 +6,7 @@
             [hti.re-dash.testing.alpha :as rd-testing]
             [hti.re-dash.flows :as flows]
             [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.database :as db]))
+            [hti.re-dash.database.impl.app-db :as app-db]))
 
 (defn default-flow-handlers
   ([]
@@ -168,7 +168,7 @@
 
 
     (is (= {:some-room-one {:area 150}}           ;; <== Test
-           (select-keys (proto/val @db/impl)
+           (select-keys @app-db/app-db
                         [:some-room-one
                          :some-room-two
                          :some-room-three]))))
@@ -185,7 +185,7 @@
 
 
     (is (= {:some-room-two {:area 150}}           ;; <== Test
-           (select-keys (proto/val @db/impl)
+           (select-keys @app-db/app-db
                         [:some-room-one
                          :some-room-two
                          :some-room-three]))))
@@ -255,4 +255,4 @@
 
         (testing "no area anymore"
           (is (= {:length 35 :width 32}
-                 (:bathroom (proto/val @db/impl)))))))))
+                 (:bathroom @app-db/app-db))))))))
