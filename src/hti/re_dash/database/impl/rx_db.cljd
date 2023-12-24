@@ -93,7 +93,7 @@
     (when @rx-db
       (doseq [f db-fns]
         (f)
-        (flows-async/run-flows!))))
+        (flows-async/run-flows! @rx-db))))
 
 
   (subscribe
@@ -111,19 +111,6 @@
 
         (dart/is? s Stream)
         (.asyncMap s #(computation-fn % query-vec)))))
-
-  (subscribe-flow
-    [_ _path]
-    (throw (ex-info "Subscribing to a Flow is not supported yet via RxDB" {})))
-
-
-  (derefable-subscribe-flow
-    [_ _path]
-    (throw (ex-info "Subscribing to a Flow is not supported yet via RxDB" {})))
-
-  (flows-async?
-    [_]
-    true)
 
   (ref
     [_]

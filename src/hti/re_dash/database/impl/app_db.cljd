@@ -6,7 +6,7 @@
 ;; Do not access directly from application code.
 ;; Access is only permitted via events and subscriptions.
 
-(defonce ^:private app-db (atom {}))
+(defonce app-db (atom {}))
 
 
 (defn- map->signals
@@ -40,20 +40,6 @@
         (catch dynamic ex st
                (println (str "Error while calculating subscription " (first query-vec)
                              " - " ex "\n" st))))))
-
-
-  (subscribe-flow
-    [_ path]
-    (f/$ (get-in (f/<! app-db) path)))
-
-
-  (derefable-subscribe-flow
-    [_ path]
-    (atom (get-in @app-db path)))
-
-  (flows-async?
-    [_]
-    false)
 
   (ref
     [_]

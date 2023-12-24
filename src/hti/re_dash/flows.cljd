@@ -4,7 +4,7 @@
             [cljd.flutter :as f]
             [hti.re-dash.utils :as utils]
             [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.database :as db]))
+            [hti.re-dash.database.impl.app-db :as app-db]))
 
 (defonce flows (atom {:definitions {}
                       :sorted-ids  []}))
@@ -110,25 +110,35 @@
                 (assoc-in new-db path (output new-resolved-inputs))
                 new-db)))))))
 
+(defn flow-async?
+  "Determine if this flow require async support.
+  Usually a non path based database (not app-db) would
+  require async support.
+  Async flows will not be processed via an interceptor, instead
+  it will be processed after other database mutation effects."
+  [flow]
+  (-> flow :path fn?))
+
 (def flow-interceptor
   (interceptors/->interceptor
     :re-dash/flow
     (fn [{{db :db} :effects
           :as      context}]
-      (let [old-db                           (proto/val @db/impl)
+      (let [old-db                           @app-db/app-db
             {:keys [definitions sorted-ids]} @flows]
         (assoc-in context [:effects :db]
                   (reduce (fn [new-db flow-id]
+                            (let [flow (get-flow flow-id definitions)]
+                              (if-not (flow-async? flow)
+                                (-> {:flow        flow
+                                     :definitions definitions
+                                     :new-db      new-db
+                                     :old-db      old-db}
 
-                            (-> {:flow        (get-flow flow-id definitions)
-                                 :definitions definitions
-                                 :new-db      new-db
-                                 :old-db      old-db}
-
-                                test-flow-alive?
-                                calc-flow-action
-                                exec-flow-action))
-
+                                    test-flow-alive?
+                                    calc-flow-action
+                                    exec-flow-action)
+                                new-db)))
                           db
                           sorted-ids))))
     nil))
@@ -204,7 +214,7 @@
 
      ;; Run the flow for the first time (::initialize)
      ;; If flow with same ID already exists, first run its cleanup
-     (swap! (proto/ref @db/impl)
+     (swap! app-db/app-db
             #(-> {:flow        new-flow
                   :new-db      (if old-flow (cleanup-fn % (:path old-flow)) %)
                   :definitions definitions}
@@ -226,7 +236,7 @@
                         (remove #(#{flow-id} %)
                                 sorted-ids)))
 
-             (swap! (proto/ref @db/impl)
+             (swap! app-db/app-db
                     #(exec-flow-action {:action      :re-dash/cleanup
                                         :flow        flow
                                         :new-db      %
@@ -241,12 +251,10 @@
 
 (defn subscribe
   [query-vec]
-  (->> query-vec
-       path
-       (proto/subscribe-flow @db/impl)))
+  (let [path (path query-vec)]
+    (f/$ (get-in (f/<! app-db/app-db) path))))
 
 (defn derefable-subscribe
   [query-vec]
-  (->> query-vec
-       path
-       (proto/derefable-subscribe-flow @db/impl)))
+  (let [path (path query-vec)]
+    (atom (get-in @app-db/app-db path))))

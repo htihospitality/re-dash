@@ -1,7 +1,6 @@
 (ns acme.model
   (:require [hti.re-dash.alpha :as rd]
             [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.database :as db]
             [hti.re-dash.database.impl.rx-db :as rx]))
 
 (def coll-name
@@ -29,11 +28,13 @@
 
   (rd/reg-sub
     ::app-state
+    :rxdb
     (fn [db [_ selector]]
       (rx/->query db coll-name selector)))
 
   (rd/reg-sub
     ::width
+    :rxdb
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
@@ -41,6 +42,7 @@
 
   (rd/reg-sub
     ::length
+    :rxdb
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
@@ -48,6 +50,7 @@
 
   (rd/reg-sub
     ::area
+    :rxdb
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
@@ -55,36 +58,37 @@
 
   (rd/reg-sub
     ::kill-switch
+    :rxdb
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
       (if (true? (rx/field doc "killSwitch"))
         :on :off)))
 
-  (rd/reg-event-db
+  (rd/reg-event-fx
     ::inc-w
     (fn [_ _]
-      [#(rx/update-field! "width" inc coll-name)]))
+      {:rxdb [#(rx/update-field! "width" inc coll-name)]}))
 
-  (rd/reg-event-db
+  (rd/reg-event-fx
     ::inc-h
     (fn [_ _]
-      [#(rx/update-field! "length" inc coll-name)]))
+      {:rxdb [#(rx/update-field! "length" inc coll-name)]}))
 
-  (rd/reg-event-db
+  (rd/reg-event-fx
     ::dec-w
     (fn [_ _]
-      [#(rx/update-field! "width" dec coll-name)]))
+      {:rxdb [#(rx/update-field! "width" dec coll-name)]}))
 
-  (rd/reg-event-db
+  (rd/reg-event-fx
     ::dec-h
     (fn [_ _]
-      [#(rx/update-field! "length" dec coll-name)]))
+      {:rxdb [#(rx/update-field! "length" dec coll-name)]}))
 
-  (rd/reg-event-db
+  (rd/reg-event-fx
     ::flip-kill-switch
     (fn [_ _]
-      [#(rx/update-field! "killSwitch" not coll-name)]))
+      {:rxdb [#(rx/update-field! "killSwitch" not coll-name)]}))
 
   (rd/reg-event-fx
     ::reg-flow
@@ -99,8 +103,8 @@
   (rd/reg-event-fx
     ::init
     (fn [_ _]
-      {:db [#(rx/insert! coll-name
-                         {"id"         (str (DateTime/now))
-                          "width"      20
-                          "length"     20
-                          "killSwitch" false})]})))
+      {:rxdb [#(rx/insert! coll-name
+                           {"id"         (str (DateTime/now))
+                            "width"      20
+                            "length"     20
+                            "killSwitch" false})]})))

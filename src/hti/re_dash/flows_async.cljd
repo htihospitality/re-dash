@@ -8,7 +8,6 @@
             [cljd.flutter :as f]
             [hti.re-dash.utils :as utils]
             [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.database :as db]
             [hti.re-dash.flows :as flows]))
 
 (defn- resolve-inputs
@@ -43,7 +42,7 @@
   db)
 
 (defn exec-flow-action
-  [{:keys [flow action new-db old-db definitions new-flow-live?]}]
+  [{:keys [flow action new-db _old-db definitions new-flow-live?]}]
 
   (let [{:keys [inputs output path cleanup]
          :or   {cleanup cleanup-fn
@@ -133,17 +132,17 @@
 
 (defn run-flows!
   "Run all Flows"
-  []
-  (let [old-db                           (proto/val @db/impl)
-        {:keys [definitions sorted-ids]} @flows/flows]
+  [old-db]
+  (let [{:keys [definitions sorted-ids]} @flows/flows]
     (doseq [flow-id sorted-ids]
+      (let [flow (flows/get-flow flow-id definitions)]
+        (when (flows/flow-async? flow)
+          (-> {:flow        flow
+               :definitions definitions
+               :new-db      #()
+               :old-db      old-db}
 
-      (-> {:flow        (flows/get-flow flow-id definitions)
-           :definitions definitions
-           :new-db      #()
-           :old-db      old-db}
-
-          test-flow-alive?
-          await
-          flows/calc-flow-action
-          exec-flow-action))))
+              test-flow-alive?
+              await
+              flows/calc-flow-action
+              exec-flow-action))))))

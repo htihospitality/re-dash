@@ -5,7 +5,6 @@
             [acme.model :as model]
             [hti.re-dash.alpha :as rd]
             [alandipert.kahn :as kahn]
-            [hti.re-dash.database :as db]
             [hti.re-dash.database.impl.rx-db :as rx-db]))
 
 (defn calc-area
@@ -16,12 +15,13 @@
 
   (m/WidgetsFlutterBinding.ensureInitialized)
 
+  (await (rd/reg-database
+           :rxdb (rx-db/RxDB.)
+           {:name "area-db"}))
+
   (rd/register-defaults!)
 
   (model/register!)
-
-  (await (db/register! {:db-impl (rx-db/RxDB.)
-                        :name "area-db"}))
 
   (await (rd/dispatch-sync [::model/init]))
 
