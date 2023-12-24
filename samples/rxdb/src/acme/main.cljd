@@ -15,9 +15,11 @@
 
   (m/WidgetsFlutterBinding.ensureInitialized)
 
-  (await (rd/reg-database
-           :rxdb (rx-db/RxDB.)
-           {:name "area-db"}))
+  (await
+    (rd/reg-database
+      :rxdb
+      {:name     "area-db"
+       :instance (rx-db/RxDB.)}))
 
   (rd/register-defaults!)
 

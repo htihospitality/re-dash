@@ -15,7 +15,7 @@
 (defonce ^:private databases (atom {:db (app-db/AppDB.)}))
 
 (defn reg-database
-  [database-id instance args]
+  [database-id {:keys [instance] :as args}]
   (await (proto/init! instance args))
   (swap! databases assoc database-id instance))
 
