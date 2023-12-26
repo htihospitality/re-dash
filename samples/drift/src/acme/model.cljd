@@ -1,0 +1,110 @@
+(ns acme.model
+  (:require [hti.re-dash.alpha :as rd]
+            [hti.re-dash.database.protocol :as proto]
+            [hti.re-dash.database.impl.rx-db :as rx]))
+
+(def coll-name
+  "The name for the RxCollection we use as application state."
+  "AppState")
+
+(def area-flow
+  {:id          :garage-area
+   :inputs      {:w #(rx/query-field "width" coll-name)
+                 :h #(rx/query-field "length" coll-name)}
+   :output      (fn calc-area
+                  [{:keys [w h]}]
+                  (* (await w)
+                     (await h)))
+   :path        (fn [output]
+                  (rx/update-field! "area" (constantly output) coll-name))
+   :cleanup     (fn [_ _]
+                  (rx/update-field! "area" (constantly nil) coll-name))
+   :live-inputs {:ks #(rx/query-field "killSwitch" coll-name)}
+   :live?       (fn [{:keys [ks]}]
+                  (not (await ks)))})
+
+(defn register!
+  []
+
+  (rd/reg-sub
+    ::app-state
+    :rxdb
+    (fn [db [_ selector]]
+      (rx/->query db coll-name selector)))
+
+  (rd/reg-sub
+    ::width
+    :rxdb
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[doc] _]
+      (rx/field doc "width")))
+
+  (rd/reg-sub
+    ::length
+    :rxdb
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[doc] _]
+      (rx/field doc "length")))
+
+  (rd/reg-sub
+    ::area
+    :rxdb
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[doc] _]
+      (rx/field doc "area")))
+
+  (rd/reg-sub
+    ::kill-switch
+    :rxdb
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[doc] _]
+      (if (true? (rx/field doc "killSwitch"))
+        :on :off)))
+
+  (rd/reg-event-fx
+    ::inc-w
+    (fn [_ _]
+      {:rxdb [#(rx/update-field! "width" inc coll-name)]}))
+
+  (rd/reg-event-fx
+    ::inc-h
+    (fn [_ _]
+      {:rxdb [#(rx/update-field! "length" inc coll-name)]}))
+
+  (rd/reg-event-fx
+    ::dec-w
+    (fn [_ _]
+      {:rxdb [#(rx/update-field! "width" dec coll-name)]}))
+
+  (rd/reg-event-fx
+    ::dec-h
+    (fn [_ _]
+      {:rxdb [#(rx/update-field! "length" dec coll-name)]}))
+
+  (rd/reg-event-fx
+    ::flip-kill-switch
+    (fn [_ _]
+      {:rxdb [#(rx/update-field! "killSwitch" not coll-name)]}))
+
+  (rd/reg-event-fx
+    ::reg-flow
+    (fn [_ _]
+      {:reg-flow area-flow}))
+
+  (rd/reg-event-fx
+    ::clear-flow
+    (fn [_ _]
+      {:clear-flow (:id area-flow)}))
+
+  (rd/reg-event-fx
+    ::init
+    (fn [_ _]
+      {:rxdb [#(rx/insert! coll-name
+                           {"id"         (str (DateTime/now))
+                            "width"      20
+                            "length"     20
+                            "killSwitch" false})]})))
