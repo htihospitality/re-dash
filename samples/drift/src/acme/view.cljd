@@ -2,8 +2,7 @@
   (:require ["package:flutter/material.dart" :as m]
             [cljd.flutter :as f]
             [acme.model :as model]
-            [hti.re-dash.alpha :as rd]
-            [hti.re-dash.database.impl.rx-db :as rx]))
+            [hti.re-dash.alpha :as rd]))
 
 (def description
   (f/widget
@@ -20,7 +19,7 @@
       [(m/Icon m/Icons.info)
        (m/SizedBox .width 10)
        (m/Flexible
-         .child (m/Text "Shows an example of how to use RxDB as the app state back-end database instead of the default path based Map Atom (NOTE - RxDB for Flutter is not yet production ready)."))])))
+         .child (m/Text "Shows an example of how to use Drift as the app state back-end database instead of the default path based Map Atom."))])))
 
 
 (def garage-calculator
@@ -39,21 +38,21 @@
          .children
          [(m/IconButton
             .icon (m/Icon (m/Icons.remove_circle_outline))
-            .onPressed #(rd/dispatch [::model/dec-w :garage]))
+            .onPressed #(rd/dispatch [::model/dec-w width]))
           (m/Text (str "Width: " width))
           (m/IconButton
             .icon (m/Icon (m/Icons.add_circle_outline))
-            .onPressed #(rd/dispatch [::model/inc-w :garage]))])
+            .onPressed #(rd/dispatch [::model/inc-w width]))])
        (m/Row
          .mainAxisAlignment m/MainAxisAlignment.center
          .children
          [(m/IconButton
             .icon (m/Icon (m/Icons.remove_circle_outline))
-            .onPressed #(rd/dispatch [::model/dec-h :garage]))
+            .onPressed #(rd/dispatch [::model/dec-h length]))
           (m/Text (str "Length: " length))
           (m/IconButton
             .icon (m/Icon (m/Icons.add_circle_outline))
-            .onPressed #(rd/dispatch [::model/inc-h :garage]))])
+            .onPressed #(rd/dispatch [::model/inc-h length]))])
        (m/Divider)
        (m/Row
          .mainAxisAlignment m/MainAxisAlignment.center

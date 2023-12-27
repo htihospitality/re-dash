@@ -1,6 +1,6 @@
-# rxdb
+# flow_drift
 
-> This sample tries to demonstrate the Flow sample using RxDB (experimental) as the back-end for app state as opposed to a Clojure map.
+> This sample tries to demonstrate the Flow sample using Drift as the back-end for app state as opposed to a Clojure map.
 
 Shows an example of using Flows to calculate a derived result of some calculation, in addition to Flow life-cycle controls.
 
@@ -18,40 +18,25 @@ flutter create .
 clj -M:cljd flutter
 ```
 
-## Updating the RxDB database schema
+## Updating the Drift database schema
 
 > Ignore this section if you only intend to run this sample as is. Read on if you made some changes that require a scheme update.
 
-RxDB requires a schema to be persisted prior to any documents being inserted, see [RxDB Flutter Example](https://github.com/pubkey/rxdb/blob/master/examples/flutter/README.md)
+Drift requires a schema to be persisted prior to any rows  being inserted, see [Database class](https://drift.simonbinder.eu/docs/getting-started/#database-class)
 
-This sample includes a pre-built schema with source in `.javascript/src/index.js`.
+This sample includes a pre-built schema with source in `lib/database.dart`.
 
-Any changes to the schema will need to be recompiled with node
+Any changes to the schema will need to be recompiled:
 
-(for more information see: https://rxdb.info/articles/flutter-database.html)
 
 ```bash
-## Make any required changes to .javascript/src/index.js
 
-## Clone RxDB
+# Either once off
 
-cd $HOME/src
+dart run build_runner build
 
-git clone git@github.com:pubkey/rxdb.git
+# Or watched for changes
 
-## Copy over .javascript/src/index.js into the rxdb clone
+dart run build_runner watch
 
-cp $HOME/src/re-dash/samples/rxdb/javascript/src/index.js $HOME/src/rxdb/examples/flutter/javascript/src/index.js
-
-## Run the npm build scripts
-
-cd $HOME/src/rxdb/examples/flutter/javascript
-
-npm run preinstall && npm run build
-
-## Copy back the compiled dist folder
-
-mkdir -p $HOME/src/re-dash/samples/rxdb/javascript/dist
-
-cp $HOME/src/rxdb/examples/flutter/javascript/dist/index.js $HOME/src/re-dash/samples/rxdb/javascript/dist/index.js
 ```

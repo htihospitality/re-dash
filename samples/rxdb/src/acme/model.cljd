@@ -1,25 +1,96 @@
 (ns acme.model
-  (:require [hti.re-dash.alpha :as rd]
-            [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.database.impl.rx-db :as rx]))
+  (:require ["package:rxdb/rxdb.dart" :as rxdb]
+            [hti.re-dash.alpha :as rd]
+            [hti.re-dash.database.protocol :as proto]))
 
 (def coll-name
   "The name for the RxCollection we use as application state."
   "AppState")
 
+(defn ->collection
+  "Returns a RxCollection on the given db"
+  [^rxdb/RxDatabase db]
+  (.getCollection db coll-name))
+
+
+(defn ->query
+  "Returns a RxQuery on the given collection and selector.
+  The RxQuery can be used to exec or observe."
+  [db selector]
+  (-> ^rxdb/RxCollection (->collection db)
+      (.find selector)))
+
+(defn doc->map
+  "Transforms a RxDocument into a Clojure map"
+  [doc]
+  (when doc
+    (->> (.-data ^rxdb/RxDocument doc)
+         (into {}))))
+
+(defn field
+  "Gets a field out of a RxDocument"
+  [doc field]
+  (-> doc
+      doc->map
+      (get field)))
+
+(defn query-field
+  "Returns the field value in the last document in the collection
+  coll-name (the last document is used as the AppState)"
+  [db field]
+  (-> ^rxdb/RxQuery (->query db {})
+      .exec
+      await
+      last
+      doc->map
+      (get field)))
+
+(defn insert!
+  [db data]
+  (-> ^rxdb/RxCollection (->collection db)
+      (.insert data)))
+
+(defn update-field!
+  "RxDB for Flutter does not yet support an Update of an existing document,
+  only a Delete & Insert of a new document into the collection.
+
+  This function inserts a new document into the collection by applying f
+  to field on the last document in the collection.
+
+  (effectively we're emulating Update as we only ever use the last document in the
+  collection to represent the current app state)"
+  [db field f]
+  (let [coll ^rxdb/RxCollection (->collection db)
+        doc  (-> (.find coll {})
+                 .exec
+                 await
+                 last)
+        data (doc->map doc)
+        val (get data field)]
+
+    ;; Clean up old doc
+    (.remove ^rxdb/RxDocument doc)
+
+    (->> (merge data
+                {"id"  (str (DateTime/now))
+                 field ((fnil f 0) val)})
+         (.insert coll))))
+
+
 (def area-flow
   {:id          :garage-area
-   :inputs      {:w #(rx/query-field "width" coll-name)
-                 :h #(rx/query-field "length" coll-name)}
+   :database-id :rxdb
+   :inputs      {:w #(when % (await (query-field % "width")))
+                 :h #(when % (await (query-field % "length")))}
    :output      (fn calc-area
                   [{:keys [w h]}]
                   (* (await w)
                      (await h)))
-   :path        (fn [output]
-                  (rx/update-field! "area" (constantly output) coll-name))
-   :cleanup     (fn [_ _]
-                  (rx/update-field! "area" (constantly nil) coll-name))
-   :live-inputs {:ks #(rx/query-field "killSwitch" coll-name)}
+   :path        (fn [output db]
+                  (update-field! db "area" (constantly output)))
+   :cleanup     (fn [db _]
+                  (update-field! db "area" (constantly nil)))
+   :live-inputs {:ks #(when % (await (query-field % "killSwitch")))}
    :live?       (fn [{:keys [ks]}]
                   (not (await ks)))})
 
@@ -30,7 +101,7 @@
     ::app-state
     :rxdb
     (fn [db [_ selector]]
-      (rx/->query db coll-name selector)))
+      (->query db selector)))
 
   (rd/reg-sub
     ::width
@@ -38,7 +109,7 @@
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
-      (rx/field doc "width")))
+      (field doc "width")))
 
   (rd/reg-sub
     ::length
@@ -46,7 +117,7 @@
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
-      (rx/field doc "length")))
+      (field doc "length")))
 
   (rd/reg-sub
     ::area
@@ -54,7 +125,7 @@
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
-      (rx/field doc "area")))
+      (field doc "area")))
 
   (rd/reg-sub
     ::kill-switch
@@ -62,33 +133,34 @@
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
-      (if (true? (rx/field doc "killSwitch"))
+      (if (true? (field doc "killSwitch"))
         :on :off)))
 
   (rd/reg-event-fx
     ::inc-w
     (fn [_ _]
-      {:rxdb [#(rx/update-field! "width" inc coll-name)]}))
+      {:rxdb #(update-field! % "width" inc)}))
 
   (rd/reg-event-fx
     ::inc-h
     (fn [_ _]
-      {:rxdb [#(rx/update-field! "length" inc coll-name)]}))
+      {:rxdb #(update-field! % "length" inc)}))
 
   (rd/reg-event-fx
     ::dec-w
     (fn [_ _]
-      {:rxdb [#(rx/update-field! "width" dec coll-name)]}))
+      {:rxdb #(update-field! % "width" dec)}))
 
   (rd/reg-event-fx
     ::dec-h
     (fn [_ _]
-      {:rxdb [#(rx/update-field! "length" dec coll-name)]}))
+      {:rxdb #(update-field! % "length" dec)}))
 
   (rd/reg-event-fx
     ::flip-kill-switch
-    (fn [_ _]
-      {:rxdb [#(rx/update-field! "killSwitch" not coll-name)]}))
+    (fn [_ [_ kill-switch]]
+      {:rxdb #(update-field! % "killSwitch" (constantly (if (= :on kill-switch)
+                                                          true false)))}))
 
   (rd/reg-event-fx
     ::reg-flow
@@ -103,8 +175,8 @@
   (rd/reg-event-fx
     ::init
     (fn [_ _]
-      {:rxdb [#(rx/insert! coll-name
-                           {"id"         (str (DateTime/now))
-                            "width"      20
-                            "length"     20
-                            "killSwitch" false})]})))
+      {:rxdb #(insert! %
+                       {"id"         (str (DateTime/now))
+                        "width"      20
+                        "length"     20
+                        "killSwitch" false})})))

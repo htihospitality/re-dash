@@ -7,18 +7,16 @@
             [hti.re-dash.debugging :as debugging]
             [hti.re-dash.interceptors :as interceptors]
             [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.database.impl.app-db :as app-db]))
+            [hti.re-dash.database.impl.app-db :as app-db]
+            [hti.re-dash.database.core :as database]))
 
 
 ;; Databases
 
-(defonce ^:private databases (atom {:db (app-db/AppDB.)}))
-
 (defn reg-database
   [database-id {:keys [instance] :as args}]
   (await (proto/init! instance args))
-  (swap! databases assoc database-id instance))
-
+  (swap! database/databases assoc database-id instance))
 
 
 ;; Subscriptions
@@ -72,7 +70,7 @@
         {:keys [signal-builder computation-fn database-id]}
         (get @subscriptions subscription-id)
 
-        database (get @databases database-id)]
+        database (get @database/databases database-id)]
 
     (if database
 
@@ -107,7 +105,7 @@
 
 (defn build-sub-map
   [args]
-  (let [databases @databases
+  (let [databases @database/databases
         database-id (some #{(first args)} (keys databases))
         database    (get databases (or database-id :db))
 
@@ -246,7 +244,7 @@
 (defn- do-fx!
   [{:keys [effects] :as context}]
 
-  (let [databases        @databases
+  (let [databases        @database/databases
         app-db-effect    (select-keys effects [:db])
         other-db-effects (->> (clojure.set/intersection
                                 (-> effects keys set (disj :db))
@@ -359,7 +357,7 @@
                                     (assoc cofx database-id
                                            (proto/val database)))
                                   {:event event-vec}
-                                  @databases)))
+                                  @database/databases)))
                  nil))
 
 (defn inject-cofx
@@ -384,7 +382,7 @@
                               #(get-in % (flatten args))))
                  (fn [context]
                    (update-in context [:effects :db]
-                              #(assoc-in (proto/val (:db @databases)) (flatten args) %)))))
+                              #(assoc-in (proto/val (:db @database/databases)) (flatten args) %)))))
 
 
 

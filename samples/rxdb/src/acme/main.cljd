@@ -4,7 +4,6 @@
             [acme.view :as view]
             [acme.model :as model]
             [hti.re-dash.alpha :as rd]
-            [alandipert.kahn :as kahn]
             [hti.re-dash.database.impl.rx-db :as rx-db]))
 
 (defn calc-area

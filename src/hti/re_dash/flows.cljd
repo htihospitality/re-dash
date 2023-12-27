@@ -3,7 +3,6 @@
             [alandipert.kahn :as kahn]
             [cljd.flutter :as f]
             [hti.re-dash.utils :as utils]
-            [hti.re-dash.database.protocol :as proto]
             [hti.re-dash.database.impl.app-db :as app-db]))
 
 (defonce flows (atom {:definitions {}
@@ -117,7 +116,9 @@
   Async flows will not be processed via an interceptor, instead
   it will be processed after other database mutation effects."
   [flow]
-  (-> flow :path fn?))
+  (let [database-id (:database-id flow)]
+    (not (or (nil? database-id)       ;; app-db is default
+             (= :db database-id)))))
 
 (def flow-interceptor
   (interceptors/->interceptor

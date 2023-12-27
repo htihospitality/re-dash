@@ -8,76 +8,6 @@
 (defonce ^:private rx-db (atom nil))
 
 
-(defn ->collection
-  "Returns a RxCollection on the given db"
-  [^rxdb/RxDatabase db coll-name]
-  (.getCollection db coll-name))
-
-
-(defn ->query
-  "Returns a RxQuery on the given collection and selector.
-  The RxQuery can be used to exec or observe."
-  [db coll-name selector]
-  (-> ^rxdb/RxCollection (->collection db coll-name)
-      (.find selector)))
-
-(defn doc->map
-  "Transforms a RxDocument into a Clojure map"
-  [doc]
-  (when doc
-    (->> (.-data ^rxdb/RxDocument doc)
-         (into {}))))
-
-(defn field
-  "Gets a field out of a RxDocument"
-  [doc field]
-  (-> doc
-      doc->map
-      (get field)))
-
-(defn query-field
-  "Returns the field value in the last document in the collection
-  coll-name (the last document is used as the AppState)"
-  [field coll-name]
-  (-> ^rxdb/RxQuery (->query @rx-db coll-name {})
-      .exec
-      await
-      last
-      doc->map
-      (get field)))
-
-(defn insert!
-  [coll-name data]
-  (-> ^rxdb/RxCollection (->collection @rx-db coll-name)
-      (.insert data)))
-
-(defn update-field!
-  "RxDB for Flutter does not yet support an Update of an existing document,
-  only a Delete & Insert of a new document into the collection.
-
-  This function inserts a new document into the collection by applying f
-  to field on the last document in the collection.
-
-  (effectively we're emulating Update as we only ever use the last document in the
-  collection to represent the current app state)"
-  [field f coll-name]
-  (let [coll ^rxdb/RxCollection (->collection @rx-db coll-name)
-        doc  (-> (.find coll {})
-                 .exec
-                 await
-                 last)
-        data (doc->map doc)
-        val (get data field)]
-
-    ;; Clean up old doc
-    (.remove ^rxdb/RxDocument doc)
-
-    (->> (merge data
-                {"id"  (str (DateTime/now))
-                 field ((fnil f 0) val)})
-         (.insert coll))))
-
-
 (deftype RxDB []
   protocol/Database
 
@@ -89,11 +19,10 @@
 
 
   (mutate!
-    [_ db-fns]
-    (when @rx-db
-      (doseq [f db-fns]
-        (f)
-        (flows-async/run-flows! @rx-db))))
+    [_ db-fn]
+    (when-let [rx-db @rx-db]
+      (db-fn rx-db)
+      (flows-async/run-flows! rx-db rx-db)))
 
 
   (subscribe

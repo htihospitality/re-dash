@@ -1,6 +1,6 @@
-name: rx_db
+name: flow_drift
 
-description: Shows an example of how to use RxDB as the app state back-end database instead of the default path based Map Atom (NOTE - RxDB for Flutter is not yet production ready).
+description: Shows an example of how to use Drift as the app state back-end database instead of the default path based Map Atom.
 
 version: 1.0.0+1
 
@@ -27,6 +27,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-
-  assets:
-    - javascript/dist/index.js

@@ -1,0 +1,5 @@
+(ns hti.re-dash.database.core
+  (:require [hti.re-dash.database.impl.app-db :as app-db]
+            [hti.re-dash.database.protocol :as proto]))
+
+(defonce databases (atom {:db (app-db/AppDB.)}))

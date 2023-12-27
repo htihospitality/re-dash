@@ -1,94 +1,125 @@
 (ns acme.model
-  (:require [hti.re-dash.alpha :as rd]
+  (:require ["database.dart" :as db]
+            ["package:drift/drift.dart" :as d]
+            [hti.re-dash.alpha :as rd]
             [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.database.impl.rx-db :as rx]))
+            [hti.re-dash.database.impl.drift :as drift]))
 
-(def coll-name
-  "The name for the RxCollection we use as application state."
-  "AppState")
+(defn ->query
+  "Returns AppStateData from table AppState"
+  [^db/AppDatabase db]
+  (when db
+    (-> (.select db (.-appState db))
+        .get await first)))
 
 (def area-flow
   {:id          :garage-area
-   :inputs      {:w #(rx/query-field "width" coll-name)
-                 :h #(rx/query-field "length" coll-name)}
+   :database-id :drift
+   :inputs      {:w #(when % (.-width ^db/AppStateData (await (->query %))))
+                 :h #(when % (.-length ^db/AppStateData (await (->query %))))}
    :output      (fn calc-area
                   [{:keys [w h]}]
-                  (* (await w)
-                     (await h)))
-   :path        (fn [output]
-                  (rx/update-field! "area" (constantly output) coll-name))
-   :cleanup     (fn [_ _]
-                  (rx/update-field! "area" (constantly nil) coll-name))
-   :live-inputs {:ks #(rx/query-field "killSwitch" coll-name)}
+                  (let [width  (await w)
+                        length (await h)]
+                    (when (and width length)
+                      (* width length))))
+   :path        (fn [output ^db/AppDatabase db]
+                  (when db
+                    (.write (.update db (.-appState db))
+                            (db/AppStateCompanion
+                              .area (-> output int d/Value)))))
+   :cleanup     (fn [^db/AppDatabase db _]
+                  (when db
+                    (.write (.update db (.-appState db))
+                            (db/AppStateCompanion
+                              .area (d/Value nil)))))
+   :live-inputs {:ks #(when % (.-killSwitch ^db/AppStateData (await (->query %))))}
    :live?       (fn [{:keys [ks]}]
                   (not (await ks)))})
+
 
 (defn register!
   []
 
   (rd/reg-sub
     ::app-state
-    :rxdb
-    (fn [db [_ selector]]
-      (rx/->query db coll-name selector)))
+    :drift
+    (fn [^db/AppDatabase db _]
+      (.select db (.-appState db))))
 
   (rd/reg-sub
     ::width
-    :rxdb
+    :drift
     (fn [_]
       (rd/subscribe [::app-state]))
-    (fn [[doc] _]
-      (rx/field doc "width")))
+    (fn [[^db/AppStateData data] _]
+      (.-width data)))
 
   (rd/reg-sub
     ::length
-    :rxdb
+    :drift
     (fn [_]
       (rd/subscribe [::app-state]))
-    (fn [[doc] _]
-      (rx/field doc "length")))
+    (fn [[^db/AppStateData data] _]
+      (.-length data)))
 
   (rd/reg-sub
     ::area
-    :rxdb
+    :drift
     (fn [_]
       (rd/subscribe [::app-state]))
-    (fn [[doc] _]
-      (rx/field doc "area")))
+    (fn [[^db/AppStateData data] _]
+      (.-area data)))
 
   (rd/reg-sub
     ::kill-switch
-    :rxdb
+    :drift
     (fn [_]
       (rd/subscribe [::app-state]))
-    (fn [[doc] _]
-      (if (true? (rx/field doc "killSwitch"))
+    (fn [[^db/AppStateData data] _]
+      (if (true? (.-killSwitch data))
         :on :off)))
 
   (rd/reg-event-fx
     ::inc-w
-    (fn [_ _]
-      {:rxdb [#(rx/update-field! "width" inc coll-name)]}))
+    (fn [_ [_ width]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .width (-> width inc int d/Value))))}))
 
   (rd/reg-event-fx
     ::inc-h
-    (fn [_ _]
-      {:rxdb [#(rx/update-field! "length" inc coll-name)]}))
+    (fn [_ [_ length]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .length (-> length inc int d/Value))))}))
 
   (rd/reg-event-fx
     ::dec-w
-    (fn [_ _]
-      {:rxdb [#(rx/update-field! "width" dec coll-name)]}))
+    (fn [_ [_ width]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .width (-> width dec int d/Value))))}))
 
   (rd/reg-event-fx
     ::dec-h
-    (fn [_ _]
-      {:rxdb [#(rx/update-field! "length" dec coll-name)]}))
+    (fn [_ [_ length]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .length (-> length dec int d/Value))))}))
 
   (rd/reg-event-fx
     ::flip-kill-switch
-    (fn [_ _]
-      {:rxdb [#(rx/update-field! "killSwitch" not coll-name)]}))
+    (fn [_ [_ kill-switch]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .killSwitch (d/Value (if (= :on kill-switch)
+                                                  true false)))))}))
 
   (rd/reg-event-fx
     ::reg-flow
@@ -103,8 +134,11 @@
   (rd/reg-event-fx
     ::init
     (fn [_ _]
-      {:rxdb [#(rx/insert! coll-name
-                           {"id"         (str (DateTime/now))
-                            "width"      20
-                            "length"     20
-                            "killSwitch" false})]})))
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.insertOnConflictUpdate
+                   (.into db (.-appState db))
+                   (db/AppStateCompanion.insert
+                     .id (d/Value 1)
+                     .width (d/Value 20)
+                     .length (d/Value 20)
+                     .killSwitch (d/Value false))))})))

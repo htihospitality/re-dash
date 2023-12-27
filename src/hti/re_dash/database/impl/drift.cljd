@@ -1,0 +1,51 @@
+(ns hti.re-dash.database.impl.drift
+  (:require ["package:drift/drift.dart" :as drift]
+            ["database.dart" :as database]
+            [hti.re-dash.database.protocol :as protocol]
+            [hti.re-dash.flows :as flows]
+            [hti.re-dash.flows-async :as flows-async]))
+
+
+(defonce ^:private drift-db (atom nil))
+
+
+(deftype Drift []
+  protocol/Database
+
+  (init!
+    [_ _]
+    (reset! drift-db (await (database/AppDatabase.))))
+
+
+  (mutate!
+    [_ db-fn]
+    (when-let [drift-db @drift-db]
+      (db-fn drift-db)
+      (flows-async/run-flows! drift-db nil)))
+
+
+  (subscribe
+    [_ signals computation-fn query-vec]
+    (let [s (cond
+
+              ;; TODO for multi stream signals maybe rxdart/ForkJoinStream ??
+              (vector? signals) (first signals)
+
+              :else             signals)]
+
+      (cond
+        (dart/is? s Stream)
+        (.asyncMap ^Stream s #(computation-fn % query-vec))
+
+        :else
+        (when-let [computation (computation-fn s query-vec)]
+          (.watch ^drift/SimpleSelectStatement computation)))))
+
+  (ref
+    [_]
+    @drift-db)
+
+
+  (val
+    [_]
+    @drift-db))

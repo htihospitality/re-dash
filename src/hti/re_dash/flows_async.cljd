@@ -3,12 +3,9 @@
   Overrides certain functions to support async where needed.
   Does not follow the interceptor chain, instead, flows gets
   executed after database mutation completed."
-  (:require [hti.re-dash.interceptors :as interceptors]
-            [alandipert.kahn :as kahn]
-            [cljd.flutter :as f]
-            [hti.re-dash.utils :as utils]
+  (:require [hti.re-dash.flows :as flows]
             [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.flows :as flows]))
+            [hti.re-dash.database.core :as database]))
 
 (defn- resolve-inputs
   "Resolves the flow inputs to their current values in app-db
@@ -16,7 +13,7 @@
   [inputs _definitions db]
   (if inputs
     (->> (map (fn [[input-key input-path]]
-                {input-key (dart/async-barrier (await (input-path)))})
+                {input-key (dart/async-barrier (await (input-path db)))})
               inputs)
          (into {}))
     db))
@@ -59,10 +56,10 @@
 
       :re-dash/initialize
       (if new-flow-live?
-        (->> (resolve-inputs inputs definitions new-db)
-             output
-             await
-             path)
+        (-> (resolve-inputs inputs definitions new-db)
+            output
+            await
+            (path new-db))
         new-db)
 
       :re-dash/output
@@ -71,7 +68,7 @@
       (-> (resolve-inputs inputs definitions new-db)
           output
           await
-          path))))
+          (path new-db)))))
 
 (defn reg-flow
 
@@ -90,7 +87,12 @@
          new-flow
          (assoc flow
                 :id flow-id
-                :graph (flows/inputs->graph flow-id inputs))]
+                :graph (flows/inputs->graph flow-id inputs))
+
+         database
+         (when-let [database (->> (:database-id new-flow)
+                                  (get @database/databases))]
+           (proto/val database))]
 
      ;; Register the flow definition
      (swap! flows/flows #(flows/->sorted-flows % new-flow))
@@ -99,12 +101,14 @@
      (when old-flow
        (exec-flow-action {:action      :re-dash/cleanup
                           :flow        old-flow
-                          :new-db      #()
+                          :new-db      database
+                          :old-db      database
                           :definitions definitions}))
 
      ;; Run the flow for the first time (:re-dash/initialize)
      (-> {:flow        new-flow
-          :new-db      #()
+          :new-db      database
+          :old-db      database
           :definitions definitions}
          test-flow-alive?
          await
@@ -118,7 +122,12 @@
   [flow-id]
   (swap! flows/flows
          (fn [{:keys [definitions sorted-ids] :as flows}]
-           (let [flow (flows/get-flow flow-id definitions)]
+           (let [flow (flows/get-flow flow-id definitions)
+
+                 database
+                 (when-let [database (->> (:database-id flow)
+                                          (get @database/databases))]
+                   (proto/val database))]
 
              (-> (update flows :definitions dissoc flow-id)
                  (assoc :sorted-ids
@@ -127,19 +136,20 @@
 
              (exec-flow-action {:action      :re-dash/cleanup
                                 :flow        flow
-                                :new-db      #()
+                                :new-db      database
+                                :old-db      database
                                 :definitions definitions})))))
 
 (defn run-flows!
   "Run all Flows"
-  [old-db]
+  [new-db old-db]
   (let [{:keys [definitions sorted-ids]} @flows/flows]
     (doseq [flow-id sorted-ids]
       (let [flow (flows/get-flow flow-id definitions)]
         (when (flows/flow-async? flow)
           (-> {:flow        flow
                :definitions definitions
-               :new-db      #()
+               :new-db      new-db
                :old-db      old-db}
 
               test-flow-alive?

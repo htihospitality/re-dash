@@ -4,22 +4,17 @@
             [acme.view :as view]
             [acme.model :as model]
             [hti.re-dash.alpha :as rd]
-            [alandipert.kahn :as kahn]
-            [hti.re-dash.database.impl.rx-db :as rx-db]))
-
-(defn calc-area
-  [{:keys [w h]}]
-  ((fnil * 0 0) w h))
+            [hti.re-dash.database.impl.drift :as drift]))
 
 (defn main []
 
   (m/WidgetsFlutterBinding.ensureInitialized)
 
+
   (await
     (rd/reg-database
-      :rxdb
-      {:name     "area-db"
-       :instance (rx-db/RxDB.)}))
+      :drift
+      {:instance (drift/Drift.)}))
 
   (rd/register-defaults!)
 
@@ -32,7 +27,7 @@
 
   (f/run
     (m/MaterialApp
-      .title "rxdb"
+      .title "drift"
       .theme (m/ThemeData .primarySwatch m.Colors/blue))
     .home
     (m/Scaffold
