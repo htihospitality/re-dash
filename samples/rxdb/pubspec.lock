@@ -192,7 +192,7 @@ packages:
     source: path
     version: "1.0.0"
   rxdart:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: rxdart
       sha256: "5d22055fd443806c03ef24a02000637cf51eae49c2a0168d38a43fc166b0209c"

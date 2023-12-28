@@ -120,12 +120,22 @@
       (field doc "length")))
 
   (rd/reg-sub
-    ::area
+    ::area-flow-output
     :rxdb
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[doc] _]
       (field doc "area")))
+
+  (rd/reg-sub
+    ::area-layer-3-sub
+    :rxdb
+    (fn [_]
+      [(rd/subscribe [::width])
+       (rd/subscribe [::length])])
+    (fn [[width length] _]
+      (when (and width length)
+        (* width length))))
 
   (rd/reg-sub
     ::kill-switch

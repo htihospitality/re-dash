@@ -1,5 +1,6 @@
 (ns hti.re-dash.database.impl.rx-db
   (:require ["package:rxdb/rxdb.dart" :as rxdb]
+            ["package:rxdart/rxdart.dart" :as rxdart]
             [hti.re-dash.database.protocol :as protocol]
             [hti.re-dash.flows :as flows]
             [hti.re-dash.flows-async :as flows-async]))
@@ -27,8 +28,7 @@
     [_ signals computation-fn query-vec]
     (let [s (cond
 
-              ;; TODO for multi stream signals maybe rxdart/ForkJoinStream ??
-              (vector? signals) (first signals)
+              (vector? signals) (rxdart/CombineLatestStream.list signals)
 
               :else             signals)]
 

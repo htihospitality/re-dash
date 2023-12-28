@@ -15,8 +15,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.0
   path_provider: ^2.0.0
   path: ^1.8.3
-  re_dash:
-    path: .clojuredart/deps/9e731771ee44667e14d1ef770e035e356b959692944310a4eb0a6918f52e5a6c
+  rxdart: ^0.27.7
 
 dev_dependencies:
   flutter_test:

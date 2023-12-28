@@ -26,7 +26,8 @@
   (f/widget
     :watch [width (rd/subscribe [::model/width])
             length (rd/subscribe [::model/length])
-            area (rd/subscribe [::model/area])
+            area-flow-output (rd/subscribe [::model/area-flow-output])
+            area-layer-3-sub (rd/subscribe [::model/area-layer-3-sub])
             kill-switch (rd/subscribe [::model/kill-switch])]
 
     m/Expanded
@@ -57,8 +58,13 @@
        (m/Row
          .mainAxisAlignment m/MainAxisAlignment.center
          .children
-         [(m/Text (str "Area (derived value from Flow): " area))])
+         [(m/Text (str "Area (derived value from Layer 3 Sub): " area-layer-3-sub))])
        (m/Divider)
+       (m/Row
+         .mainAxisAlignment m/MainAxisAlignment.center
+         .children
+         [(m/Text (str "Area (derived value from Flow): " area-flow-output))])
+       (m/SizedBox .height 8)
        (m/Row
          .mainAxisAlignment m/MainAxisAlignment.center
          .children

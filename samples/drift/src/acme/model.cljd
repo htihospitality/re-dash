@@ -64,12 +64,22 @@
       (.-length data)))
 
   (rd/reg-sub
-    ::area
+    ::area-flow-output
     :drift
     (fn [_]
       (rd/subscribe [::app-state]))
     (fn [[^db/AppStateData data] _]
       (.-area data)))
+
+  (rd/reg-sub
+    ::area-layer-3-sub
+    :drift
+    (fn [_]
+      [(rd/subscribe [::width])
+       (rd/subscribe [::length])])
+    (fn [[width length] _]
+      (when (and width length)
+        (* width length))))
 
   (rd/reg-sub
     ::kill-switch
