@@ -115,10 +115,8 @@
   require async support.
   Async flows will not be processed via an interceptor, instead
   it will be processed after other database mutation effects."
-  [flow]
-  (let [database-id (:database-id flow)]
-    (not (or (nil? database-id)       ;; app-db is default
-             (= :db database-id)))))
+  [{:keys [path]}]
+  (fn? path))
 
 (def flow-interceptor
   (interceptors/->interceptor
