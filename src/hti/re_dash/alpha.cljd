@@ -16,9 +16,9 @@
 ;; Databases
 
 (defn reg-database
-  [database-id {:keys [instance] :as args}]
-  (await (proto/init! instance args))
-  (swap! database/databases assoc database-id instance))
+  [database-id {:keys [impl] :as args}]
+  (await (proto/init! impl args))
+  (swap! database/databases assoc database-id impl))
 
 
 ;; Subscriptions

@@ -12,10 +12,8 @@
   protocol/Database
 
   (init!
-    [_ {:keys [name]}]
-    (reset! rx-db
-            (await
-              (rxdb/getRxDatabase "javascript/dist/index.js" name))))
+    [_ {:keys [instance]}]
+    (reset! rx-db (await instance)))
 
 
   (mutate!
@@ -35,11 +33,11 @@
               :else             signals)]
 
       (cond
-        (dart/is? s rxdb/RxDatabase)
-        (.$ (computation-fn s query-vec))
-
         (dart/is? s Stream)
-        (.asyncMap s #(computation-fn % query-vec)))))
+        (.asyncMap ^Stream s #(computation-fn % query-vec))
+
+        :else
+        (.$ ^rxdb/RxQuery (computation-fn s query-vec)))))
 
   (ref
     [_]

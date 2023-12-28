@@ -1,5 +1,6 @@
 (ns acme.main
   (:require ["package:flutter/material.dart" :as m]
+            ["package:rxdb/rxdb.dart" :as database]
             [cljd.flutter :as f]
             [acme.view :as view]
             [acme.model :as model]
@@ -17,8 +18,8 @@
   (await
     (rd/reg-database
       :rxdb
-      {:name     "area-db"
-       :instance (rx-db/RxDB.)}))
+      {:impl     (rx-db/RxDB.)
+       :instance (database/getRxDatabase "javascript/dist/index.js" "AppDatabase")}))
 
   (rd/register-defaults!)
 

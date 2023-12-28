@@ -1,5 +1,6 @@
 (ns acme.main
   (:require ["package:flutter/material.dart" :as m]
+            ["database.dart" :as database]
             [cljd.flutter :as f]
             [acme.view :as view]
             [acme.model :as model]
@@ -10,11 +11,11 @@
 
   (m/WidgetsFlutterBinding.ensureInitialized)
 
-
   (await
     (rd/reg-database
       :drift
-      {:instance (drift/Drift.)}))
+      {:impl     (drift/Drift.)
+       :instance (database/AppDatabase.)}))
 
   (rd/register-defaults!)
 

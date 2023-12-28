@@ -9,13 +9,6 @@ import 'package:sqlite3_flutter_libs/sqlite3_flutter_libs.dart';
 
 part 'database.g.dart';
 
-class TodoItems extends Table {
-  IntColumn get id => integer().autoIncrement()();
-  TextColumn get title => text().withLength(min: 6, max: 32)();
-  TextColumn get content => text().named('body')();
-  IntColumn get category => integer().nullable()();
-}
-
 class AppState extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get width => integer().nullable()();
@@ -24,7 +17,7 @@ class AppState extends Table {
   BoolColumn get killSwitch => boolean().nullable()();
 }
 
-@DriftDatabase(tables: [TodoItems, AppState])
+@DriftDatabase(tables: [AppState])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
