@@ -5,5 +5,5 @@
            :task (shell "clojure -M:cljd compile")}
 
   build {:doc  "Builds the deployable assets"
-         :task (shell "flutter build web --base-href=/re-dash/flow/build/web/")
+         :task (shell "flutter build web --base-href=/re-dash/rxdb/build/web/")
          :depends [compile]}}}
