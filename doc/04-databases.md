@@ -10,7 +10,7 @@ This is achieved by implementing the `Database` protocol. Out the box, re-dash s
 
 - AppDB (the default path based Map Atom)
 - [Drift](https://drift.simonbinder.eu/) (a relational persistence library over sqlite3)
-- [RxDB](https://rxdb.info/articles/flutter-database.html)  (a popular reactive database for JavaScript, usable from Flutter)
+- [RxDB](https://rxdb.info/articles/flutter-database.html)  (a popular reactive NoSQL database for JavaScript, usable from Flutter)
 
 ## AppDB
 
@@ -62,7 +62,11 @@ Use the chosen database-id in `reg-sub` that should target Drift for example
 
 ### Events
 
-Use the chosen database-id as the effect-id in events. No need to register the effect as this is done for you.
+Use the chosen database-id as the effect-id in events.
+
+Note that the event itself does not mutate the database directly, but instead returns a function being passed the database instance. This is keeping with re-dash (& re-frame) methodology of writing pure event handlers - the mutation is applied later when re-dash execute effects.
+
+There is no need to register the `:drift` (database-id) effect as this is automatically done for you.
 
 ```clojure
 (rd/reg-event-fx
@@ -81,7 +85,7 @@ There's a working sample app in the `samples/drift` folder using the Drift datab
 
 ## RxDB
 
-A popular reactive database for JavaScript, [somewhat usable from Flutter](https://rxdb.info/articles/flutter-database.html). It has various storage layer plugins including an in-memory only option.
+A popular reactive NoSQL database for JavaScript, [somewhat usable from Flutter](https://rxdb.info/articles/flutter-database.html). It has various storage layer plugins including an in-memory only option.
 
 ### Schema
 
@@ -109,16 +113,16 @@ Use the chosen database-id in `reg-sub` that should target RxDB for example
 ```clojure
 (rd/reg-sub
   ::app-state
-  :rxdb
+  :rxdb                                         ;; <== The registered database-id
   (fn [db [_ selector]]
     (-> ^rxdb/RxCollection (->collection db)
-        (.find selector))))
+        (.find selector))))                     ;; <== Query that returns a subsribable (stream)
 
 (rd/reg-sub
   ::width
   :rxdb
   (fn [_]
-    (rd/subscribe [::app-state]))
+    (rd/subscribe [::app-state]))               ;; <== Layer 3 signal(s) supported
   (fn [[doc] _]
     (get (->> (.-data ^rxdb/RxDocument doc)
               (into {}))
@@ -127,7 +131,11 @@ Use the chosen database-id in `reg-sub` that should target RxDB for example
 
 ### Events
 
-Use the chosen database-id as the effect-id in events. No need to register the effect as this is done for you.
+Use the chosen database-id as the effect-id in events.
+
+Note that the event itself does not mutate the database directly, but instead returns a function being passed the database instance. This is keeping with re-dash (& re-frame) methodology of writing pure event handlers - the mutation is applied later when re-dash execute effects.
+
+There is no need to register the `:rxdb` (database-id) effect as this is automatically done for you.
 
 ```clojure
 (rd/reg-event-fx
