@@ -2,7 +2,7 @@
 
 Global state in re-dash is stored in some database.
 
-Most times this database is usually in-memory only and represented as some data structure, usually a map - this is the default behavior.
+Usually this database is in-memory only and represented as some data structure, like a map - this is the default behavior.
 
 Other times we might require more capability like persistence, relational queries, replication etc. and want to opt for using a full featured database engine on the client instead, while keeping with the core concepts of the [data loop](https://day8.github.io/re-frame/a-loop/) - events, subscriptions etc.
 
@@ -115,7 +115,7 @@ Use the chosen database-id in `reg-sub` that should target RxDB for example
   ::app-state
   :rxdb                                         ;; <== The registered database-id
   (fn [db [_ selector]]
-    (-> ^rxdb/RxCollection (->collection db)
+    (-> (.getCollection db coll-name)
         (.find selector))))                     ;; <== Query that returns a subsribable (stream)
 
 (rd/reg-sub
@@ -141,14 +141,14 @@ There is no need to register the `:rxdb` (database-id) effect as this is automat
 (rd/reg-event-fx
     ::increment-width
     (fn [_ _]
-      {:rxdb #(.insert coll
+      {:rxdb #(.insert (.getCollection % coll-name)
                        {"id"    (str (DateTime/now))
                         "width" ((fnil f 0) val)})}))
 ```
 
 ### Status
 
-RxDB for Flutter is experimental, and many features are missing. It is implemented in this PR merely as a proof of concept that plugging other databases into re-dash might be feasible.
+RxDB for Flutter is experimental, and many features are missing.
 
 Some of the known limitations include:
 
