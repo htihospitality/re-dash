@@ -2,7 +2,7 @@
 
 Global state in re-dash is stored in some database.
 
-Most times, this database is usually in-memory only and represented as some data structure, usually a map.
+Most times this database is usually in-memory only and represented as some data structure, usually a map - this is the default behavior.
 
 Other times we might require more capability like persistence, relational queries, replication etc. and want to opt for using a full featured database engine on the client instead, while keeping with the core concepts of the [data loop](https://day8.github.io/re-frame/a-loop/) - events, subscriptions etc.
 
@@ -26,7 +26,7 @@ This `Database` is registered by default,  always available to query via subscri
 
 The simplest way (currently) is to maintain the Drift schema in raw `.dart` files in the `/.lib` folder directly and have the code generator watch it with `dart run build_runner watch`.
 
-For more info see the `samples/drift` sample and the [drift documentation](https://drift.simonbinder.eu/docs/getting-started/#database-class).
+For more info see the `samples/drift/lib/database.dart` sample and the [drift documentation](https://drift.simonbinder.eu/docs/getting-started/#database-class).
 
 ### Database registration
 
@@ -87,8 +87,7 @@ A popular reactive database for JavaScript, [somewhat usable from Flutter](https
 
 Maintain the schema in raw JavaScript, and compile it with node.
 
-For more info see the `samples/rxdb` sample and the [rxdb documentation](https://github.com/pubkey/rxdb/tree/master/examples/flutter#in-javascript)
-
+For more info see the `samples/rxdb/javascript/src/index.js` sample and the [rxdb documentation](https://github.com/pubkey/rxdb/tree/master/examples/flutter#in-javascript)
 
 ### Database registration
 
@@ -107,6 +106,37 @@ Register it  early on in the app startup (like in `main`)
 
 Use the chosen database-id in `reg-sub` that should target RxDB for example
 
+```clojure
+(rd/reg-sub
+  ::app-state
+  :rxdb
+  (fn [db [_ selector]]
+    (-> ^rxdb/RxCollection (->collection db)
+        (.find selector))))
+
+(rd/reg-sub
+  ::width
+  :rxdb
+  (fn [_]
+    (rd/subscribe [::app-state]))
+  (fn [[doc] _]
+    (get (->> (.-data ^rxdb/RxDocument doc)
+              (into {}))
+         "width")))
+```
+
+### Events
+
+Use the chosen database-id as the effect-id in events. No need to register the effect as this is done for you.
+
+```clojure
+(rd/reg-event-fx
+    ::increment-width
+    (fn [_ _]
+      {:rxdb #(.insert coll
+                       {"id"    (str (DateTime/now))
+                        "width" ((fnil f 0) val)})}))
+```
 
 ### Status
 
