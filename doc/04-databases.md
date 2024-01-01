@@ -12,6 +12,8 @@ This is achieved by implementing the `Database` protocol. Out the box, re-dash s
 - [Drift](https://drift.simonbinder.eu/) (a relational persistence library over sqlite3)
 - [RxDB](https://rxdb.info/articles/flutter-database.html)  (a popular reactive NoSQL database for JavaScript, usable from Flutter)
 
+> Multiple databases may be registered and used in the same app simultaneously.
+
 ## AppDB
 
 The default path based Map Atom.
