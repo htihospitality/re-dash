@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.9.2 - 2024-01-19
+### Changes
+- Fixed issue with Flows when reg-event-fx did not return a :db effect
+
 ## 0.9.1 - 2023-12-12
 ### Changes
 - Added logging to report errors that occur while calculating subscription [PR 28](https://github.com/htihospitality/re-dash/pull/28)
