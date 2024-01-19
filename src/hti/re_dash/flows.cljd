@@ -128,7 +128,7 @@
                                 calc-flow-action
                                 exec-flow-action))
 
-                          db
+                          (or db old-db)
                           sorted-ids))))
     nil))
 
