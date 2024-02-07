@@ -33,6 +33,10 @@ To gain an understanding of the concepts in re-dash, head over to the excellent 
 
 Also see [State management in ClojureDart](https://www.etiennetheodore.com/state-management-in-clojuredart) by [Etienne Théodore](https://github.com/Kiruel) for a detailed walk-through
 
+## London Clojurians Talk (Feb 2024)
+
+[<img src="https://img.youtube.com/vi/4A7oK0UJe9w/maxresdefault.jpg" width="80%">](https://www.youtube.com/watch?v=4A7oK0UJe9w "London Clojurians Talk Feb 2024")
+
 ## Configuration
 
 [![Clojars Project](https://img.shields.io/clojars/v/net.clojars.htihospitality/re-dash.svg)](https://clojars.org/net.clojars.htihospitality/re-dash)
