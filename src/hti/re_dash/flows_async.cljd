@@ -129,16 +129,16 @@
                                           (get @database/databases))]
                    (proto/val database))]
 
-             (-> (update flows :definitions dissoc flow-id)
-                 (assoc :sorted-ids
-                        (remove #(#{flow-id} %)
-                                sorted-ids)))
-
              (exec-flow-action {:action      :re-dash/cleanup
                                 :flow        flow
                                 :new-db      database
                                 :old-db      database
-                                :definitions definitions})))))
+                                :definitions definitions})
+
+             (-> (update flows :definitions dissoc flow-id)
+                 (assoc :sorted-ids
+                        (remove #(#{flow-id} %)
+                                sorted-ids)))))))
 
 (defn run-flows!
   "Run all Flows"
