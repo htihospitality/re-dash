@@ -138,7 +138,7 @@
                                     calc-flow-action
                                     exec-flow-action)
                                 new-db)))
-                          db
+                          (or db old-db)
                           sorted-ids))))
     nil))
 
@@ -228,18 +228,18 @@
   [flow-id]
   (swap! flows
          (fn [{:keys [definitions sorted-ids] :as flows}]
-           (let [flow (get-flow flow-id definitions)]
-
-             (-> (update flows :definitions dissoc flow-id)
-                 (assoc :sorted-ids
-                        (remove #(#{flow-id} %)
-                                sorted-ids)))
+           (let [flow (flow-id definitions)]
 
              (swap! app-db/app-db
                     #(exec-flow-action {:action      :re-dash/cleanup
                                         :flow        flow
                                         :new-db      %
-                                        :definitions definitions}))))))
+                                        :definitions definitions}))
+
+             (-> (update flows :definitions dissoc flow-id)
+                 (assoc :sorted-ids
+                        (remove #(#{flow-id} %)
+                                sorted-ids)))))))
 
 (defn- path
   [query-vec]
