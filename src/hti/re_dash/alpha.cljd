@@ -26,13 +26,6 @@
 
 (defonce ^:private subscriptions (atom {}))
 
-(defn- map->resolved-signals
-  [signals]
-  (->> (map (fn [[k v]]
-              {k (f/<! v)})
-            signals)
-       (into {})))
-
 (defn- derefable-map->signals
   "Same as map->signals but used in tests, see derefable-subscribe"
   [signals]

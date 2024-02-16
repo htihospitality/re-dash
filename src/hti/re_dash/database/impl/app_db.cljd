@@ -9,7 +9,7 @@
 (defonce app-db (atom {}))
 
 
-(defn- map->signals
+(defn- map->resolved-signals
   [signals]
   (->> (map (fn [[k v]]
               {k (f/<! v)})
@@ -34,7 +34,7 @@
         (computation-fn
           (cond
             (vector? signals) (map #(f/<! %) signals)
-            (map? signals)    (map->signals signals)
+            (map? signals)    (map->resolved-signals signals)
             :else             (f/<! signals))
           query-vec)
         (catch dynamic ex st
