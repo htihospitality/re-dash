@@ -37,7 +37,8 @@
         (.asyncMap ^Stream s #(computation-fn % query-vec))
 
         :else
-        (.$ ^rxdb/RxQuery (computation-fn s query-vec)))))
+        (when-let [computation (computation-fn s query-vec)]
+          (.$ ^rxdb/RxQuery computation)))))
 
   (ref
     [_]

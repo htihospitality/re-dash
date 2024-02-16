@@ -44,7 +44,8 @@
   [signal-builder [subscription-id query :as query-vec]]
   (or (get-in @signal-cache [subscription-id query])
       (let [signals' ((signal-builder subscribe) query-vec)]
-        (when-not (dart/is? signals' c/Atom)
+        (when-not (or (dart/is? signals' c/Atom)
+                      (dart/is? signals' Stream))
           (swap! signal-cache #(assoc-in % [subscription-id query] signals')))
         signals')))
 
