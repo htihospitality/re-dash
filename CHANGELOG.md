@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.9.3 - 2024-02-16
+### Changes
+- Fixed :clear-flow effect that cleared all flows instead of only the one specified
+- Fixed :clear-flow effect by making it continue silently when the flow was not found instead of throwing an exception
+- Fixed Cell memory leak when using signaled subscriptions [PR 32](https://github.com/htihospitality/re-dash/pull/32)
+
 ## 0.9.2 - 2024-01-19
 ### Changes
 - Fixed issue with Flows when reg-event-fx did not return a :db effect

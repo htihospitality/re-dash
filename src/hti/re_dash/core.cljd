@@ -2,6 +2,7 @@
   (:require ["dart:async" :as da]
             ["dart:collection" :as coll]
             [cljd.flutter :as f]
+            [cljd.core :as c]
             [clojure.string :as string]
             [clojure.data :as data]
             [hti.re-dash.debugging :as debugging]
@@ -23,6 +24,13 @@
 
 (defonce ^:private subscriptions (atom {}))
 
+(defn- map->resolved-signals
+  [signals]
+  (->> (map (fn [[k v]]
+              {k (f/<! v)})
+            signals)
+       (into {})))
+
 (defn- derefable-map->signals
   "Same as map->signals but used in tests, see derefable-subscribe"
   [signals]
@@ -30,6 +38,22 @@
               {k @v})
             signals)
        (into {})))
+
+
+(defonce ^:private signal-cache (atom {}))
+
+(defn- ->signals
+  "Resolve subscription signals using the signal-builder.
+
+  Signals are cached so their Cell instances gets re-used
+  during the lifetime of the subscription.
+  "
+  [signal-builder [subscription-id query :as query-vec]]
+  (or (get-in @signal-cache [subscription-id query])
+      (let [signals' ((signal-builder subscribe) query-vec)]
+        (when-not (dart/is? signals' c/Atom)
+          (swap! signal-cache #(assoc-in % [subscription-id query] signals')))
+        signals')))
 
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
@@ -75,7 +99,7 @@
     (if database
 
       (proto/subscribe database
-                       ((signal-builder subscribe) query-vec)
+                       (->signals signal-builder query-vec)
                        computation-fn
                        query-vec)
 
