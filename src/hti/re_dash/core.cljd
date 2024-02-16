@@ -2,6 +2,7 @@
   (:require ["dart:async" :as da]
             ["dart:collection" :as coll]
             [cljd.flutter :as f]
+            [cljd.core :as c]
             [clojure.string :as string]
             [clojure.data :as data]
             [hti.re-dash.debugging :as debugging]
@@ -13,7 +14,7 @@
 
 (defonce ^:private subscriptions (atom {}))
 
-(defn- map->signals
+(defn- map->resolved-signals
   [signals]
   (->> (map (fn [[k v]]
               {k (f/<! v)})
@@ -27,6 +28,22 @@
               {k @v})
             signals)
        (into {})))
+
+
+(defonce ^:private signal-cache (atom {}))
+
+(defn- ->signals
+  "Resolve subscription signals using the signal-builder.
+
+  Signals are cached so their Cell instances gets re-used
+  during the lifetime of the subscription.
+  "
+  [signal-builder [subscription-id query :as query-vec]]
+  (or (get-in @signal-cache [subscription-id query])
+      (let [signals' ((signal-builder subscribe) query-vec)]
+        (when-not (dart/is? signals' c/Atom)
+          (swap! signal-cache #(assoc-in % [subscription-id query] signals')))
+        signals')))
 
 (defn subscribe
   "Subscribe to derived state, internally using ClojureDart Cells (see the [Cheatsheet](https://github.com/Tensegritics/ClojureDart/blob/main/doc/ClojureDart%20Cheatsheet.pdf))
@@ -66,17 +83,17 @@
     (if-let [{:keys [signal-builder computation-fn]}
              (get @subscriptions subscription-id)]
       (f/$
-       (try
-         (computation-fn
-          (let [signals ((signal-builder subscribe) query-vec)]
-            (cond
-              (vector? signals) (map #(f/<! %) signals)
-              (map? signals)    (map->signals signals)
-              :else             (f/<! signals)))
-          query-vec)
-         (catch dynamic ex st
-           (println (str "Error while calculating subscription " subscription-id
-                         " - " ex "\n" st)))))
+        (try
+          (computation-fn
+            (let [signals (->signals signal-builder query-vec)]
+              (cond
+                (vector? signals) (map #(f/<! %) signals)
+                (map? signals)    (map->resolved-signals signals)
+                :else             (f/<! signals)))
+            query-vec)
+          (catch dynamic ex st
+                 (println (str "Error while calculating subscription " subscription-id
+                               " - " ex "\n" st)))))
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 (defn derefable-subscribe
