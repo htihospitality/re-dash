@@ -1,5 +1,9 @@
 # Change Log
 
+## 0.9.4 - 2024-02-17
+### Changes
+- Fixed signal Cell cache to be keyed more accurately to full query
+
 ## 0.9.3 - 2024-02-16
 ### Changes
 - Fixed :clear-flow effect that cleared all flows instead of only the one specified
