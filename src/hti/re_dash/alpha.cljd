@@ -43,11 +43,11 @@
   Signals are cached so their Cell instances gets re-used
   during the lifetime of the subscription.
   "
-  [signal-builder [subscription-id query :as query-vec]]
-  (or (get-in @signal-cache [subscription-id query])
+  [signal-builder [subscription-id :as query-vec]]
+  (or (get-in @signal-cache [subscription-id query-vec])
       (let [signals' ((signal-builder subscribe) query-vec)]
         (when-not (dart/is? signals' c/Atom)
-          (swap! signal-cache #(assoc-in % [subscription-id query] signals')))
+          (swap! signal-cache #(assoc-in % [subscription-id query-vec] signals')))
         signals')))
 
 (defn subscribe
