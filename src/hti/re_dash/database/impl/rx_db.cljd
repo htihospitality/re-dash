@@ -1,0 +1,50 @@
+(ns hti.re-dash.database.impl.rx-db
+  (:require ["package:rxdb/rxdb.dart" :as rxdb]
+            ["package:rxdart/rxdart.dart" :as rxdart]
+            [hti.re-dash.database.protocol :as protocol]
+            [hti.re-dash.flows :as flows]
+            [hti.re-dash.flows-async :as flows-async]))
+
+
+(defonce ^:private rx-db (atom nil))
+
+
+(deftype RxDB []
+  protocol/Database
+
+  (init!
+    [_ {:keys [instance]}]
+    (reset! rx-db (await instance)))
+
+
+  (mutate!
+    [_ db-fn]
+    (when-let [rx-db @rx-db]
+      (db-fn rx-db)
+      (flows-async/run-flows! rx-db rx-db)))
+
+
+  (subscribe
+    [_ signals computation-fn query-vec]
+    (let [s (cond
+
+              (vector? signals) (rxdart/CombineLatestStream.list signals)
+
+              :else             signals)]
+
+      (cond
+        (dart/is? s Stream)
+        (.asyncMap ^Stream s #(computation-fn % query-vec))
+
+        :else
+        (when-let [computation (computation-fn s query-vec)]
+          (.$ ^rxdb/RxQuery computation)))))
+
+  (ref
+    [_]
+    @rx-db)
+
+
+  (val
+    [_]
+    @rx-db))

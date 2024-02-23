@@ -1,0 +1,26 @@
+name: rx_db
+
+description: Shows an example of how to use RxDB as the app state back-end database instead of the default path based Map Atom (NOTE - RxDB for Flutter is not yet production ready).
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=2.19.6 <3.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  rxdb: ^15.0.0-beta.31
+  rxdart: ^0.27.5
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - javascript/dist/index.js

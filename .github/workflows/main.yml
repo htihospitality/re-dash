@@ -56,7 +56,7 @@ jobs:
 
     strategy:
       matrix:
-        app: [coeffects, counter, fetch, flow, local_storage, signals, event_queue]
+        app: [coeffects, counter, fetch, flow, local_storage, signals, event_queue, drift]
 
     steps:
       - name: Checkout
@@ -147,6 +147,12 @@ jobs:
         with:
           path: samples/event_queue/build/web
           key: samples-event_queue-build-output-${{ github.RUN_NUMBER }}
+
+      - name: Restore drift build output
+        uses: actions/cache@v3
+        with:
+          path: samples/drift/build/web
+          key: samples-drift-build-output-${{ github.RUN_NUMBER }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4

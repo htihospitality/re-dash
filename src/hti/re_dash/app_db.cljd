@@ -1,7 +1,0 @@
-(ns hti.re-dash.app-db)
-
-;; The app-db.
-;; Do not access directly from application code.
-;; Access is only permitted via events and subscriptions.
-
-(defonce app-db (atom {}))

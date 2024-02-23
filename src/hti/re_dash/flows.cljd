@@ -1,16 +1,16 @@
 (ns hti.re-dash.flows
   (:require [hti.re-dash.interceptors :as interceptors]
-            [hti.re-dash.app-db :as app-db]
             [alandipert.kahn :as kahn]
             [cljd.flutter :as f]
-            [hti.re-dash.utils :as utils]))
+            [hti.re-dash.utils :as utils]
+            [hti.re-dash.database.impl.app-db :as app-db]))
 
-(defonce ^:private flows (atom {:definitions {}
-                                :sorted-ids  []}))
+(defonce flows (atom {:definitions {}
+                      :sorted-ids  []}))
 
 (def ^:private flow? map?)
 
-(defn- get-flow
+(defn get-flow
   [flow-id definitions]
   (or (flow-id definitions)
       (throw (Exception. (str "Flow not found: " flow-id)))))
@@ -60,17 +60,17 @@
 
            (and old-flow-live?
                 new-flow-live?)
-           ::output
+           :re-dash/output
 
            (and (not old-flow-live?)
                 new-flow-live?)
-           ::initialize
+           :re-dash/initialize
 
            (and old-flow-live?
                 (not new-flow-live?))
-           ::cleanup
+           :re-dash/cleanup
 
-           :else ::none)))
+           :else :re-dash/none)))
 
 (defn cleanup-fn
   "Default cleanup function that dissocs path
@@ -88,26 +88,35 @@
 
     (condp = action
 
-      ::none
+      :re-dash/none
       new-db
 
-      ::cleanup
+      :re-dash/cleanup
       (cleanup new-db path)
 
-      ::initialize
+      :re-dash/initialize
       (if new-flow-live?
         (->> (resolve-inputs inputs definitions new-db)
              output
              (assoc-in new-db path))
         new-db)
 
-      ::output
+      :re-dash/output
       (->> [new-db old-db]
            (map #(resolve-inputs inputs definitions %))
            ((fn [[new-resolved-inputs old-resolved-inputs]]
               (if (not= new-resolved-inputs old-resolved-inputs)
                 (assoc-in new-db path (output new-resolved-inputs))
                 new-db)))))))
+
+(defn flow-async?
+  "Determine if this flow require async support.
+  Usually a non path based database (not app-db) would
+  require async support.
+  Async flows will not be processed via an interceptor, instead
+  it will be processed after other database mutation effects."
+  [{:keys [path]}]
+  (fn? path))
 
 (def flow-interceptor
   (interceptors/->interceptor
@@ -118,22 +127,23 @@
             {:keys [definitions sorted-ids]} @flows]
         (assoc-in context [:effects :db]
                   (reduce (fn [new-db flow-id]
+                            (let [flow (get-flow flow-id definitions)]
+                              (if-not (flow-async? flow)
+                                (-> {:flow        flow
+                                     :definitions definitions
+                                     :new-db      new-db
+                                     :old-db      old-db}
 
-                            (-> {:flow        (get-flow flow-id definitions)
-                                 :definitions definitions
-                                 :new-db      new-db
-                                 :old-db      old-db}
-
-                                test-flow-alive?
-                                calc-flow-action
-                                exec-flow-action))
-
+                                    test-flow-alive?
+                                    calc-flow-action
+                                    exec-flow-action)
+                                new-db)))
                           (or db old-db)
                           sorted-ids))))
     nil))
 
 
-(defn- sort-flow-ids
+(defn sort-flow-ids
   "Sort all Flow definition dependency graphs
   using Khan's topological sorting algorithm"
   [definitions flow-id]
@@ -146,7 +156,7 @@
       (throw (ex-info "Cyclic dependency detected when registering Flow"
                       {:flow-id flow-id}))))
 
-(defn- inputs->graph
+(defn inputs->graph
   "Returns a dependency graph between the flow & its inputs
 
   for example this flow definition:
@@ -170,7 +180,7 @@
             inputs)
        (apply merge-with into {})))
 
-(defn- ->sorted-flows
+(defn ->sorted-flows
   "Adds a new Flow definition and sort all the Flow IDs"
   [{:keys [definitions]}
    {:keys [id] :as flow}]
@@ -208,7 +218,7 @@
                   :new-db      (if old-flow (cleanup-fn % (:path old-flow)) %)
                   :definitions definitions}
                  test-flow-alive?
-                 (assoc :action ::initialize)
+                 (assoc :action :re-dash/initialize)
                  exec-flow-action)))))
 
 
@@ -221,7 +231,7 @@
            (let [flow (flow-id definitions)]
 
              (swap! app-db/app-db
-                    #(exec-flow-action {:action      ::cleanup
+                    #(exec-flow-action {:action      :re-dash/cleanup
                                         :flow        flow
                                         :new-db      %
                                         :definitions definitions}))
@@ -234,7 +244,6 @@
 (defn- path
   [query-vec]
   (let [flow-id (-> query-vec second :id)]
-
     (-> flow-id
         (get-flow (:definitions @flows))
         :path)))

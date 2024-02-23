@@ -1,0 +1,154 @@
+(ns acme.model
+  (:require ["database.dart" :as db]
+            ["package:drift/drift.dart" :as d]
+            [hti.re-dash.alpha :as rd]
+            [hti.re-dash.database.protocol :as proto]
+            [hti.re-dash.database.impl.drift :as drift]))
+
+(defn ->query
+  "Returns AppStateData from table AppState"
+  [^db/AppDatabase db]
+  (when db
+    (-> (.select db (.-appState db))
+        .get await first)))
+
+(def area-flow
+  {:id          :garage-area
+   :database-id :drift
+   :inputs      {:w #(when % (.-width ^db/AppStateData (await (->query %))))
+                 :h #(when % (.-length ^db/AppStateData (await (->query %))))}
+   :output      (fn calc-area
+                  [{:keys [w h]}]
+                  (let [width  (await w)
+                        length (await h)]
+                    (when (and width length)
+                      (* width length))))
+   :path        (fn [output ^db/AppDatabase db]
+                  (when db
+                    (.write (.update db (.-appState db))
+                            (db/AppStateCompanion
+                              .area (-> output int d/Value)))))
+   :cleanup     (fn [^db/AppDatabase db _]
+                  (when db
+                    (.write (.update db (.-appState db))
+                            (db/AppStateCompanion
+                              .area (d/Value nil)))))
+   :live-inputs {:ks #(when % (.-killSwitch ^db/AppStateData (await (->query %))))}
+   :live?       (fn [{:keys [ks]}]
+                  (not (await ks)))})
+
+
+(defn register!
+  []
+
+  (rd/reg-sub
+    ::app-state
+    :drift
+    (fn [^db/AppDatabase db _]
+      (.select db (.-appState db))))
+
+  (rd/reg-sub
+    ::width
+    :drift
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[^db/AppStateData data] _]
+      (.-width data)))
+
+  (rd/reg-sub
+    ::length
+    :drift
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[^db/AppStateData data] _]
+      (.-length data)))
+
+  (rd/reg-sub
+    ::area-flow-output
+    :drift
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[^db/AppStateData data] _]
+      (.-area data)))
+
+  (rd/reg-sub
+    ::area-layer-3-sub
+    :drift
+    (fn [_]
+      [(rd/subscribe [::width])
+       (rd/subscribe [::length])])
+    (fn [[width length] _]
+      (when (and width length)
+        (* width length))))
+
+  (rd/reg-sub
+    ::kill-switch
+    :drift
+    (fn [_]
+      (rd/subscribe [::app-state]))
+    (fn [[^db/AppStateData data] _]
+      (if (true? (.-killSwitch data))
+        :on :off)))
+
+  (rd/reg-event-fx
+    ::inc-w
+    (fn [_ [_ width]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .width (-> width inc int d/Value))))}))
+
+  (rd/reg-event-fx
+    ::inc-h
+    (fn [_ [_ length]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .length (-> length inc int d/Value))))}))
+
+  (rd/reg-event-fx
+    ::dec-w
+    (fn [_ [_ width]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .width (-> width dec int d/Value))))}))
+
+  (rd/reg-event-fx
+    ::dec-h
+    (fn [_ [_ length]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .length (-> length dec int d/Value))))}))
+
+  (rd/reg-event-fx
+    ::flip-kill-switch
+    (fn [_ [_ kill-switch]]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.write (.update db (.-appState db))
+                         (db/AppStateCompanion
+                           .killSwitch (d/Value (if (= :on kill-switch)
+                                                  true false)))))}))
+
+  (rd/reg-event-fx
+    ::reg-flow
+    (fn [_ _]
+      {:reg-flow area-flow}))
+
+  (rd/reg-event-fx
+    ::clear-flow
+    (fn [_ _]
+      {:clear-flow (:id area-flow)}))
+
+  (rd/reg-event-fx
+    ::init
+    (fn [_ _]
+      {:drift #(let [db ^db/AppDatabase %]
+                 (.insertOnConflictUpdate
+                   (.into db (.-appState db))
+                   (db/AppStateCompanion.insert
+                     .id (d/Value 1)
+                     .width (d/Value 20)
+                     .length (d/Value 20)
+                     .killSwitch (d/Value false))))})))

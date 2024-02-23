@@ -4,8 +4,9 @@
             [cljd.flutter :as f]
             [hti.re-dash.alpha :as rd]
             [hti.re-dash.testing.alpha :as rd-testing]
-            [hti.re-dash.app-db :as app-db]
-            [hti.re-dash.flows :as flows]))
+            [hti.re-dash.flows :as flows]
+            [hti.re-dash.database.protocol :as proto]
+            [hti.re-dash.database.impl.app-db :as app-db]))
 
 (defn default-flow-handlers
   ([]

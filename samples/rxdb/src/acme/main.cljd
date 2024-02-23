@@ -1,15 +1,25 @@
 (ns acme.main
   (:require ["package:flutter/material.dart" :as m]
+            ["package:rxdb/rxdb.dart" :as database]
             [cljd.flutter :as f]
             [acme.view :as view]
             [acme.model :as model]
-            [hti.re-dash.alpha :as rd]))
+            [hti.re-dash.alpha :as rd]
+            [hti.re-dash.database.impl.rx-db :as rx-db]))
 
 (defn calc-area
   [{:keys [w h]}]
   ((fnil * 0 0) w h))
 
 (defn main []
+
+  (m/WidgetsFlutterBinding.ensureInitialized)
+
+  (await
+    (rd/reg-database
+      :rxdb
+      {:impl     (rx-db/RxDB.)
+       :instance (database/getRxDatabase "javascript/dist/index.js" "AppDatabase")}))
 
   (rd/register-defaults!)
 
@@ -20,10 +30,9 @@
   ;; Register the Flow to calculate the area when either width or length changes
   (rd/reg-flow model/area-flow)
 
-
   (f/run
     (m/MaterialApp
-      .title "flow"
+      .title "rxdb"
       .theme (m/ThemeData .primarySwatch m.Colors/blue))
     .home
     (m/Scaffold

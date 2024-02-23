@@ -74,6 +74,8 @@ In the `samples` folder of this repository:
 | [Launch](https://htihospitality.github.io/re-dash/local_storage/build/web/) | `local_storage` | Shows an example of how to initialize shared_preferences and inject values into event handlers using coeffects. |
 | [Launch](https://htihospitality.github.io/re-dash/flow/build/web/) | `flow` | (alpha) Shows an example of using [Flows](/doc/03-flows.md) to calculate a derived result of some calculation, in addition to Flow life-cycle controls. |
 | [Launch](https://htihospitality.github.io/re-dash/event_queue/build/web/) | `event_queue` | Shows an example of ordered event execution during longer processing events & effects. Logged to console. |
+| [Launch](https://htihospitality.github.io/re-dash/drift/build/web/) | `drift` | Shows an example of how to use Drift as the app state back-end database instead of the default path based Map Atom. |
+| N/A | `rxdb` | Shows an example of how to use RxDB as the app state back-end database instead of the default path based Map Atom (NOTE - RxDB for Flutter is [not yet production ready](https://github.com/pubkey/rxdb/tree/master/examples/flutter)) and also does not support the Web platform. |
 
 
 ## Quickstart

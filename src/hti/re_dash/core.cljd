@@ -7,19 +7,22 @@
             [clojure.data :as data]
             [hti.re-dash.debugging :as debugging]
             [hti.re-dash.interceptors :as interceptors]
-            [hti.re-dash.app-db :as app-db]))
+            [hti.re-dash.database.protocol :as proto]
+            [hti.re-dash.database.impl.app-db :as app-db]
+            [hti.re-dash.database.core :as database]))
+
+
+;; Databases
+
+(defn reg-database
+  [database-id {:keys [impl] :as args}]
+  (await (proto/init! impl args))
+  (swap! database/databases assoc database-id impl))
 
 
 ;; Subscriptions
 
 (defonce ^:private subscriptions (atom {}))
-
-(defn- map->resolved-signals
-  [signals]
-  (->> (map (fn [[k v]]
-              {k (f/<! v)})
-            signals)
-       (into {})))
 
 (defn- derefable-map->signals
   "Same as map->signals but used in tests, see derefable-subscribe"
@@ -41,7 +44,8 @@
   [signal-builder [subscription-id :as query-vec]]
   (or (get-in @signal-cache [subscription-id query-vec])
       (let [signals' ((signal-builder subscribe) query-vec)]
-        (when-not (dart/is? signals' c/Atom)
+        (when-not (or (dart/is? signals' c/Atom)
+                      (dart/is? signals' Stream))
           (swap! signal-cache #(assoc-in % [subscription-id query-vec] signals')))
         signals')))
 
@@ -79,21 +83,20 @@
   See also: `reg-sub`
   "
   [query-vec]
-  (let [subscription-id (first query-vec)]
-    (if-let [{:keys [signal-builder computation-fn]}
-             (get @subscriptions subscription-id)]
-      (f/$
-        (try
-          (computation-fn
-            (let [signals (->signals signal-builder query-vec)]
-              (cond
-                (vector? signals) (map #(f/<! %) signals)
-                (map? signals)    (map->resolved-signals signals)
-                :else             (f/<! signals)))
-            query-vec)
-          (catch dynamic ex st
-                 (println (str "Error while calculating subscription " subscription-id
-                               " - " ex "\n" st)))))
+  (let [subscription-id (first query-vec)
+
+        {:keys [signal-builder computation-fn database-id]}
+        (get @subscriptions subscription-id)
+
+        database (get @database/databases database-id)]
+
+    (if database
+
+      (proto/subscribe database
+                       (->signals signal-builder query-vec)
+                       computation-fn
+                       query-vec)
+
       (throw (Exception. (str "Subscription not found: " subscription-id))))))
 
 (defn derefable-subscribe
@@ -107,7 +110,7 @@
       (atom
        (try
          (computation-fn
-          (let [signals ((signal-builder derefable-subscribe) query-vec)]
+           (let [signals ((signal-builder derefable-subscribe) query-vec)]
             (cond
               (vector? signals) (map deref signals)
               (map? signals)    (derefable-map->signals signals)
@@ -120,8 +123,16 @@
 
 (defn build-sub-map
   [args]
-  (let [[op f]
-        (take-last 2 args)
+  (let [databases @database/databases
+        database-id (some #{(first args)} (keys databases))
+        database    (get databases (or database-id :db))
+
+        args' (if database-id
+                (rest args)
+                args)
+
+        [op f]
+        (take-last 2 args')
 
         [input-args computation-fn]
         (if (or
@@ -131,9 +142,9 @@
               (fn? op)
               ;; (reg-sub ::foo :<- [::bar] (fn [_ _]))) ;; input sugar
               (vector? op))
-          [(butlast args) (last args)]
+          [(butlast args') (last args')]
           ;; (reg-sub ::foo ,,, :-> :foo)
-          (let [input-args (drop-last 2 args)]
+          (let [input-args (drop-last 2 args')]
             (case op
               :-> [input-args
                    (fn [signals _] (f signals))]
@@ -145,8 +156,9 @@
         (case (count input-args)
           0 (fn [_]
               (fn app-db-subscription
-                ([_] app-db/app-db)
-                ([_ _] app-db/app-db)))
+
+                ([_] (proto/ref database))
+                ([_ _] (proto/ref database))))
           1 (let [input-fn (first input-args)]
               (if (fn? input-fn)
                 (fn [_] input-fn)
@@ -169,7 +181,8 @@
                   ([_ _] (mapv sub-fn signals))))
               (throw (Exception. (str "Expected pairs of `:<-` and vectors, got: " input-args))))))]
     {:signal-builder signal-builder
-     :computation-fn computation-fn}))
+     :computation-fn computation-fn
+     :database-id    (or database-id :db)}))
 
 (defn reg-sub
   "A call to `reg-sub` associates a `query-id` with one function.
@@ -207,6 +220,8 @@
   "
   [subscription-id & args]
   (swap! subscriptions assoc subscription-id (build-sub-map args)))
+
+
 
 ;; Effects
 
@@ -247,35 +262,49 @@
 (defn- do-fx!
   [{:keys [effects] :as context}]
 
-  ;; Do :db effect first
-  (when-let [db (:db effects)]
-    (reset! app-db/app-db db))
+  (let [databases        @database/databases
+        app-db-effect    (select-keys effects [:db])
+        other-db-effects (->> (clojure.set/intersection
+                                (-> effects keys set (disj :db))
+                                (-> databases keys set))
+                              (select-keys effects))
+        other-effects    (->> (conj (keys other-db-effects) :db)
+                              (apply dissoc effects))]
 
-  ;; Do other effects
-  (doseq [effect-id (-> effects (dissoc :db) keys)]
-    (condp = effect-id
+    ;; Do :db effect first
+    (when-let [db (:db app-db-effect)]
+      (proto/mutate! (:db databases) db))
 
-      :dispatch
-      (enqueue (:dispatch effects))
+    ;; Do all other database effects
+    (doseq [[effect-id effect] other-db-effects]
+      (let [database (effect-id databases)]
+        (proto/mutate! database effect)))
 
-      :dispatch-later
-      (let [{:keys [ms dispatch]} (:dispatch-later effects)]
-        (da/Future.delayed (Duration .milliseconds ms)
-                           #(enqueue dispatch)))
+    ;; Do other effects
+    (doseq [[effect-id effect] other-effects]
+      (condp = effect-id
 
-      :fx
-      (doseq [[effect-id effect] (->> effects :fx (remove nil?))]
-        (if (#{:dispatch :dispatch-later} effect-id)
-          (enqueue effect)
-          (execute! effect-id effect)))
+        :dispatch
+        (enqueue effect)
 
-      :deregister-event-handler
-      (swap! events dissoc (:deregister-event-handler effects))
+        :dispatch-later
+        (let [{:keys [ms dispatch]} effect]
+          (da/Future.delayed (Duration .milliseconds ms)
+                             #(enqueue dispatch)))
 
-      ;; User effect
-      (execute! effect-id (effect-id effects))))
+        :fx
+        (doseq [[effect-id effect] (remove nil? effect)]
+          (if (#{:dispatch :dispatch-later} effect-id)
+            (enqueue effect)
+            (execute! effect-id effect)))
 
-  context)
+        :deregister-event-handler
+        (swap! events dissoc effect)
+
+        ;; User effect
+        (execute! effect-id effect)))
+
+    context))
 
 
 ;; Coeffects
@@ -341,8 +370,12 @@
   [event-vec]
   (->interceptor :re-dash/prime-cofx
                  (fn [context]
-                   (assoc context :coeffects {:event event-vec
-                                              :db    @app-db/app-db}))
+                   (assoc context :coeffects
+                          (reduce (fn [cofx [database-id database]]
+                                    (assoc cofx database-id
+                                           (proto/val database)))
+                                  {:event event-vec}
+                                  @database/databases)))
                  nil))
 
 (defn inject-cofx
@@ -367,7 +400,8 @@
                               #(get-in % (flatten args))))
                  (fn [context]
                    (update-in context [:effects :db]
-                              #(assoc-in @app-db/app-db (flatten args) %)))))
+                              #(assoc-in (proto/val (:db @database/databases)) (flatten args) %)))))
+
 
 
 
@@ -588,6 +622,10 @@
   "
   [event-vec]
   (enqueue event-vec))
+
+
+
+;; Default registrations
 
 (defn register-defaults!
   "Optional default registrations for convenience"
