@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.0.0 - 2024-02-23
+### Changes
+- Added the Database Protocol with Drift and RxDB implementations [RR 30](https://github.com/htihospitality/re-dash/pull/30)
+
 ## 0.9.4 - 2024-02-17
 ### Changes
 - Fixed signal Cell cache to be keyed more accurately to full query
