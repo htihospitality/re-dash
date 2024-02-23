@@ -12,7 +12,7 @@ This is achieved by implementing the `Database` protocol. Out the box, re-dash s
 - [Drift](https://drift.simonbinder.eu/) (a relational persistence library over sqlite3)
 - [RxDB](https://rxdb.info/articles/flutter-database.html)  (a popular reactive NoSQL database for JavaScript, usable from Flutter)
 
-> Multiple databases may be registered and used in the same app simultaneously. Note however, that subscription signals of different database implementations cannot be used with a layer 3 subscription.
+> Multiple databases may be registered and used in the same app simultaneously. Note however, that subscription signals of mixed database implementations cannot be used within one layer 3 subscription.
 
 ## AppDB
 
