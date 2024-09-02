@@ -3,7 +3,8 @@
             ["dart:convert" :as c]
             [clojure.data :as data]
             [clojure.string :as string]
-            [hti.re-dash.interceptors :as interceptors]))
+            [hti.re-dash.interceptors :as interceptors]
+            [hti.re-dash.transformers :as tf]))
 
 
 (defn- log-console!
@@ -62,6 +63,14 @@
                                           :finished finished
                                           :duration duration}))))
 
+(defn- inspect-dev-tools!
+  "Sends a serialized db value to the re-dash-inspector DevTools extension"
+  [{:keys [db-after]}]
+  (dev/postEvent "ext.re-dash"
+                 {"db" (-> db-after
+                           tf/sanitize
+                           pr-str)}))
+
 
 (defn debug
   [{:keys [target]
@@ -92,7 +101,8 @@
                           :finished   finished
                           :duration   duration
                           :event-args event-args
-                          :diff       diff}
+                          :diff       diff
+                          :db-after   db-after}
                          options)]
 
         (condp = target
@@ -101,10 +111,12 @@
           (log-console! log-args)
 
           :target/dev-tools
-          (log-dev-tools! log-args)
+          (do (log-dev-tools! log-args)
+              (inspect-dev-tools! log-args))
 
           :target/everywhere
           (do (log-console! log-args)
-              (log-dev-tools! log-args))))
+              (log-dev-tools! log-args)
+              (inspect-dev-tools! log-args))))
 
       context)))
