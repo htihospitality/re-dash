@@ -8,7 +8,7 @@
 
 
 (defn- log-console!
-  [{:keys [event-id started finished duration event-args diff
+  [{:keys [event-id started finished duration event-args db-before db-after
            diff? stats? args?]
     :or   {diff?  true
            stats? false
@@ -31,12 +31,13 @@
                  "### Event Args:"
                  event-args])
               (when diff?
-                ["-----------------------------------------------"
-                 "### DB Diff Before (Removed):"
-                 (or (first diff) {})
-                 "-----------------------------------------------"
-                 "### DB Diff After (Added):"
-                 (or (second diff) {})])
+                (let [diff (when db-after (data/diff db-before db-after))]
+                  ["-----------------------------------------------"
+                   "### DB Diff Before (Removed):"
+                   (or (first diff) {})
+                   "-----------------------------------------------"
+                   "### DB Diff After (Added):"
+                   (or (second diff) {})]))
               ["###############################################"
                "\r\n"])
             flatten
@@ -45,31 +46,14 @@
 
       (str "Event: " event-id))))
 
-
-(defn- log-dev-tools!
-  [{:keys [event-id diff event-args started finished duration
-           diff? stats? args?]
-    :or   {diff?  true
-           stats? false
-           args?  false}}]
-
-  (dev/log (str "Event: " event-id)
-           .name "re-dash"
-           .error (cond-> {}
-                    diff?  (assoc :db {:before (or (first diff) {})
-                                       :after  (or (second diff) {})})
-                    args?  (assoc :args event-args)
-                    stats? (assoc :stats {:started  started
-                                          :finished finished
-                                          :duration duration}))))
-
 (defn- inspect-dev-tools!
   "Sends a serialized db value to the re-dash-inspector DevTools extension"
-  [{:keys [db-after]}]
-  (dev/postEvent "ext.re-dash"
-                 {"db" (-> db-after
-                           tf/sanitize
-                           pr-str)}))
+  [{:keys [event-id db-after started]}]
+  (dev/postEvent "re-dash"
+                 {"event-id" (pr-str event-id)
+                  "db"       (-> db-after
+                                tf/sanitize
+                                pr-str)}))
 
 
 (defn debug
@@ -93,15 +77,13 @@
             duration   (.difference finished started)
             db-before  (-> context :debug :db)
             db-after   (-> context :effects :db)
-            diff       (when db-after
-                         (data/diff db-before db-after))
             log-args   (merge
                          {:event-id   event-id
                           :started    started
                           :finished   finished
                           :duration   duration
                           :event-args event-args
-                          :diff       diff
+                          :db-before  db-before
                           :db-after   db-after}
                          options)]
 
@@ -111,12 +93,10 @@
           (log-console! log-args)
 
           :target/dev-tools
-          (do (log-dev-tools! log-args)
-              (inspect-dev-tools! log-args))
+          (inspect-dev-tools! log-args)
 
           :target/everywhere
           (do (log-console! log-args)
-              (log-dev-tools! log-args)
               (inspect-dev-tools! log-args))))
 
       context)))
