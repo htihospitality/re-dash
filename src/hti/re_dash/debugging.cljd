@@ -1,11 +1,13 @@
 (ns hti.re-dash.debugging
   (:require ["dart:developer" :as dev]
             ["dart:convert" :as c]
+            ["package:flutter/foundation.dart" :as ff]
             [clojure.data :as data]
             [clojure.string :as string]
             [hti.re-dash.interceptors :as interceptors]
             [hti.re-dash.transformers :as tf]))
 
+(defonce debug-state (atom {}))
 
 (defn- log-console!
   [{:keys [event-id started finished duration event-args db-before db-after
@@ -48,12 +50,32 @@
 
 (defn- inspect-dev-tools!
   "Sends a serialized db value to the re-dash-inspector DevTools extension"
-  [{:keys [event-id db-after started]}]
-  (dev/postEvent "re-dash"
-                 {"event-id" (pr-str event-id)
-                  "db"       (-> db-after
-                                tf/sanitize
-                                pr-str)}))
+  [{:keys [event-id db-after]}]
+
+  (when (and ff/kDebugMode (:re-dash/inspector-connected? @debug-state))
+    (dev/postEvent "re-dash"
+                   {"event-id" (pr-str event-id)
+                    "db"       (-> db-after
+                                   tf/sanitize
+                                   pr-str)})))
+
+(defn- register-inspector
+  "Registers the re-dash-inspector listener to
+  react to connect/disconnect events"
+  [target]
+  (when (and (= :target/dev-tools target)
+             (not (:re-dash/inspector-registered? @debug-state)))
+
+    (dev/registerExtension
+      "ext.re-dash-inspector.updateConnectionState"
+      (fn [_method {:strs [action]}]
+        (condp = action
+          "connect"    (do (swap! debug-state assoc :re-dash/inspector-connected? true)
+                        (Future.value (dev/ServiceExtensionResponse.result "connected")))
+          "disconnect" (do (swap! debug-state assoc :re-dash/inspector-connected? false)
+                           (Future.value (dev/ServiceExtensionResponse.result "disconnected"))))))
+
+    (swap! debug-state assoc :re-dash/inspector-registered? true)))
 
 
 (defn debug
@@ -61,42 +83,46 @@
     :or   {target :target/console}
     :as   options}]
 
-  (interceptors/->interceptor
+  (when ff/kDebugMode
 
-    :re-dash/debug
+    (register-inspector target)
 
-    (fn before [context]
-      (assoc context :debug {:started (DateTime/now)
-                             :db      (-> context :coeffects :db)}))
+    (interceptors/->interceptor
 
-    (fn after [context]
-      (let [event-id   (-> context :coeffects :event first)
-            event-args (-> context :coeffects :event rest)
-            started    (-> context :debug :started)
-            finished   (DateTime/now)
-            duration   (.difference finished started)
-            db-before  (-> context :debug :db)
-            db-after   (-> context :effects :db)
-            log-args   (merge
-                         {:event-id   event-id
-                          :started    started
-                          :finished   finished
-                          :duration   duration
-                          :event-args event-args
-                          :db-before  db-before
-                          :db-after   db-after}
-                         options)]
+      :re-dash/debug
 
-        (condp = target
+      (fn before [context]
+        (assoc context :debug {:started (DateTime/now)
+                               :db      (-> context :coeffects :db)}))
 
-          :target/console
-          (log-console! log-args)
+      (fn after [context]
+        (let [event-id   (-> context :coeffects :event first)
+              event-args (-> context :coeffects :event rest)
+              started    (-> context :debug :started)
+              finished   (DateTime/now)
+              duration   (.difference finished started)
+              db-before  (-> context :debug :db)
+              db-after   (-> context :effects :db)
+              log-args   (merge
+                           {:event-id   event-id
+                            :started    started
+                            :finished   finished
+                            :duration   duration
+                            :event-args event-args
+                            :db-before  db-before
+                            :db-after   db-after}
+                           options)]
 
-          :target/dev-tools
-          (inspect-dev-tools! log-args)
+          (condp = target
 
-          :target/everywhere
-          (do (log-console! log-args)
-              (inspect-dev-tools! log-args))))
+            :target/console
+            (log-console! log-args)
 
-      context)))
+            :target/dev-tools
+            (inspect-dev-tools! log-args)
+
+            :target/everywhere
+            (do (log-console! log-args)
+                (inspect-dev-tools! log-args))))
+
+        context))))
