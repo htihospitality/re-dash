@@ -63,8 +63,8 @@ Providing an options map we can add / remove some logging detail:
 - `:stats?` Default `false`. Include basic timed statistics for the event execution.
 - `:target` Default `:target/console`. Logging target, one of
   - `:target/console`   - Standard out
-  - `:target/dev-tools` - (Experimental) Flutter [DevTools logging view](https://docs.flutter.dev/tools/devtools/logging), with Kind `re-dash`
-  - `:target/everywhere` - Log to both console and Flutter DevTools (experimental)
+  - `:target/dev-tools` - Send to the [re-dash-inspector](https://github.com/htihospitality/re-dash-inspector)
+  - `:target/everywhere` - Send to both console and the [re-dash-inspector](https://github.com/htihospitality/re-dash-inspector)
 
 With all the options enabled:
 
@@ -114,3 +114,11 @@ Add this somewhere early on in your app's startup, like in `main`
 (rd/reg-global-interceptor
   (rd/debug))
 ```
+
+### Performance
+
+The `debug` interceptor will only do anything when the app is running in debug mode, ie. [kDebugMode](https://api.flutter.dev/flutter/foundation/kDebugMode-constant.html) has to be true.
+
+When the target is `:target/dev-tools` the [re-dash-inspector](https://github.com/htihospitality/re-dash-inspector) has to have an active connection to re-dash before events will be sent.
+
+If neither of the above is true, the `debug` interceptor is effectively a no-op & will have no impact on app performance.
