@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.1.0 - 2024-09-23
+### Changes
+- The debug interceptor in re-dash has been enhanced to post messages to Flutter DevTools to update the new [re-dash-inspector](https://github.com/htihospitality/re-dash-inspector) (which will be released soon)
+
 ## 1.0.0 - 2024-02-23
 ### Changes
 - Added the Database Protocol with Drift and RxDB implementations [RR 30](https://github.com/htihospitality/re-dash/pull/30)
