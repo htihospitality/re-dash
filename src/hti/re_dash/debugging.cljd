@@ -5,9 +5,27 @@
             [clojure.data :as data]
             [clojure.string :as string]
             [hti.re-dash.interceptors :as interceptors]
-            [hti.re-dash.transformers :as tf]))
+            [clojure.walk :as w]))
 
 (defonce debug-state (atom {}))
+
+(defn sanitize
+  "Transforms all un-serializable map values with placeholders."
+  [m]
+  (w/postwalk
+    (fn [element]
+      (if (map-entry? element)
+        (let [[key val] element]
+          [key
+
+           (cond
+
+             ;; Functions not de-serializable by cljd.reader
+             (fn? val) 'closure
+
+             :else val)])
+        element))
+    m))
 
 (defn- log-console!
   [{:keys [event-id started finished duration event-args db-before db-after
@@ -56,7 +74,7 @@
     (dev/postEvent "re-dash"
                    {"event-id" (pr-str event-id)
                     "db"       (-> db-after
-                                   tf/sanitize
+                                   sanitize
                                    pr-str)})))
 
 (defn- register-inspector
