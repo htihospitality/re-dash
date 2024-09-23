@@ -81,7 +81,7 @@
   "Registers the re-dash-inspector listener to
   react to connect/disconnect events"
   [target]
-  (when (and (= :target/dev-tools target)
+  (when (and (#{:target/dev-tools :target/everywhere} target)
              (not (:re-dash/inspector-registered? @debug-state)))
 
     (dev/registerExtension
