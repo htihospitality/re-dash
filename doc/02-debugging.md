@@ -122,3 +122,7 @@ The `debug` interceptor will only do anything when the app is running in debug m
 When the target is `:target/dev-tools` the [re-dash-inspector](https://github.com/htihospitality/re-dash-inspector) has to have an active connection to re-dash before events will be sent.
 
 If neither of the above is true, the `debug` interceptor is effectively a no-op & will have no impact on app performance.
+
+## re-dash-inspector
+
+Check out [re-dash-inspector](https://github.com/htihospitality/re-dash-inspector), a Flutter DevTools extension that allows the developer to visually inspect and record events effecting the re-dash app-db
