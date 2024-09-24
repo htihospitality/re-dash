@@ -283,6 +283,8 @@ To debug our event handlers, we can register [interceptors](/doc/01-interceptors
 
 See: [debugging](/doc/02-debugging.md)
 
+> NEW - Check out the [re-dash-inspector](https://github.com/htihospitality/re-dash-inspector)
+
 ## Testing
 
 re-dash comes with some utilities to help with writing tests
