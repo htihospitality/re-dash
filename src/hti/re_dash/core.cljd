@@ -557,10 +557,11 @@
                   coeffects (await (:coeffects context))]
               (if before
                 (if (= :handler id)
-                  (assoc context :effects
-                         (case event-type
-                           :db {:db (before (:db coeffects) event-vec)}
-                           :fx (before coeffects event-vec)))
+                  (assoc context
+                         :effects (case event-type
+                                    :db {:db (before (:db coeffects) event-vec)}
+                                    :fx (before coeffects event-vec))
+                         :coeffects coeffects)
                   (before context))
                 context)))
           {}
