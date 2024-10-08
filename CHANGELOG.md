@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.1.1 - 2024-10-08
+### Changes
+- Fixed debug interceptor logging nil event-ids when coeffects were used
+
 ## 1.1.0 - 2024-09-23
 ### Changes
 - The debug interceptor in re-dash has been enhanced to post messages to Flutter DevTools to update the new [re-dash-inspector](https://github.com/htihospitality/re-dash-inspector) (which will be released soon)
