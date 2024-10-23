@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.1.2 - 2024-10-23
+### Changes
+- Fixed debug interceptor to return json encoded strings in response to `updateConnectionState` events from re-dash-inspector, as per [docs](https://api.flutter.dev/flutter/dart-developer/ServiceExtensionResponse/ServiceExtensionResponse.result.html)
+
 ## 1.1.1 - 2024-10-08
 ### Changes
 - Fixed debug interceptor logging nil event-ids when coeffects were used

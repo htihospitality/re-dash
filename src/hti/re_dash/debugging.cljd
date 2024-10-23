@@ -89,9 +89,11 @@
       (fn [_method {:strs [action]}]
         (condp = action
           "connect"    (do (swap! debug-state assoc :re-dash/inspector-connected? true)
-                        (Future.value (dev/ServiceExtensionResponse.result "connected")))
+                           (Future.value (dev/ServiceExtensionResponse.result
+                                           (c/jsonEncode {"status" "connected"}))))
           "disconnect" (do (swap! debug-state assoc :re-dash/inspector-connected? false)
-                           (Future.value (dev/ServiceExtensionResponse.result "disconnected"))))))
+                           (Future.value (dev/ServiceExtensionResponse.result
+                                           (c/jsonEncode {"status" "disconnected"})))))))
 
     (swap! debug-state assoc :re-dash/inspector-registered? true)))
 
