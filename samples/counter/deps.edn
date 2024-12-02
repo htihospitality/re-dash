@@ -1,16 +1,16 @@
-{:paths ["src"]
- :deps  {tensegritics/clojuredart
-         {:git/url "https://github.com/tensegritics/ClojureDart.git"
+{:paths     ["src"]
+ :deps      {tensegritics/clojuredart
+             {:git/url "https://github.com/tensegritics/ClojureDart.git"
 
-          ;; In real world scenario, get the latest SHA from ClojureDart's readme in Github
-          :sha "303e2621391abaf52a7179efb848bf6d73ebb2e8"}
+              ;; In real world scenario, get the latest SHA from ClojureDart's readme in Github
+              :sha     "0e1ef256cf3a0ee9b71db6d4af3d8be581b95195"}
 
-         ;; In real world scenario,  un-comment the line below,
-         ;; set it to the latest released re-dash version,
-         ;; and remove the :local/root coordinate
-         ;;
-         ;; net.clojars.htihospitality/re-dash {:mvn/version "x.x.x"}
-         net.clojars.htihospitality/re-dash {:local/root "../../" :deps/manifest :deps}}
+             ;; In real world scenario,  un-comment the line below,
+             ;; set it to the latest released re-dash version,
+             ;; and remove the :local/root coordinate
+             ;;
+             ;; net.clojars.htihospitality/re-dash {:mvn/version "x.x.x"}
+             net.clojars.htihospitality/re-dash {:local/root "../../" :deps/manifest :deps}}
 
  :aliases   {:cljd {:main-opts ["-m" "cljd.build"]}}
  :cljd/opts {:kind :flutter
