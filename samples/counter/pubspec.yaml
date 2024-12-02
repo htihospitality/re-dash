@@ -5,12 +5,14 @@ description: Shows an example of an incrementing counter when clicked. An event 
 version: 1.0.0+1
 
 environment:
-  sdk: '>=2.19.6 <3.0.0'
+  sdk: '>=2.19.6 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
+  re_dash:
+    path: .clojuredart/deps/df307c4976683e5087edd2576b3155a0a65a99833a08c733a1f4bd8332412e2a
 
 dev_dependencies:
   flutter_test:
