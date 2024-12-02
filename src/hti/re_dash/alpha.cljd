@@ -583,7 +583,7 @@
               (if before
                 (if (= :handler id)
                   (assoc context
-                         :effects (case event-type
+                         :effects (condp = event-type
                                     :db {:db (before (:db coeffects) event-vec)}
                                     :fx (before coeffects event-vec))
                          :coeffects coeffects)
