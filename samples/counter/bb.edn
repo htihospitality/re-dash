@@ -4,6 +4,10 @@
  {compile {:doc  "Compile app"
            :task (shell "clojure -M:cljd compile")}
 
-  build {:doc  "Builds the deployable assets"
-         :task (shell "flutter build web --base-href=/re-dash/counter/build/web/")
-         :depends [compile]}}}
+  build   {:doc     "Builds the deployable assets"
+           :task    (shell "flutter build web --base-href=/re-dash/counter/build/web/")
+           :depends [compile]}
+
+  run     {:doc      "Runs the app."
+           :requires ([clojure.string :as str])
+           :task     (clojure (str/join " " (cons "-M:cljd flutter" *command-line-args*)))}}}
