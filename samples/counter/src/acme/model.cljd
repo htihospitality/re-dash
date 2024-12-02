@@ -1,5 +1,5 @@
 (ns acme.model
-  (:require [hti.re-dash.core :as rd]))
+  (:require [hti.re-dash.alpha :as rd]))
 
 (defn register!
   []
