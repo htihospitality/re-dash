@@ -466,9 +466,9 @@
           all-interceptors
           (concat [do-fx-interceptor
                    (prime-cofx-interceptor event-vec)]
+                  [flows/flow-interceptor]
                   @global-interceptors
-                  interceptors
-                  [flows/flow-interceptor])]
+                  interceptors)]
 
       (when-not registered-event
         (throw (Exception. (str "Event not found: " event-id))))
