@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.1.3 - 2024-12-10
+### Changes
+- Fixed flow execution order to consider custom interceptor changes [PR 36](https://github.com/htihospitality/re-dash/pull/36)
+
 ## 1.1.2 - 2024-10-23
 ### Changes
 - Fixed debug interceptor to return json encoded strings in response to `updateConnectionState` events from re-dash-inspector, as per [docs](https://api.flutter.dev/flutter/dart-developer/ServiceExtensionResponse/ServiceExtensionResponse.result.html)
