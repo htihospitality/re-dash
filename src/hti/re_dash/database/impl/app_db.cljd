@@ -8,6 +8,7 @@
 
 (defonce app-db (atom {}))
 
+(defonce subscriptions-cache (atom {}))
 
 (defn- map->resolved-signals
   [signals]
@@ -16,6 +17,65 @@
             signals)
        (into {})))
 
+(defn- rd-sub
+  "Simplified copy of f/sub that allows providing
+  a callback for when the subscribable was unsubscribed"
+  [s on-unsubscribed]
+  (reify
+    f/Subscribable
+    (-subscribe [_self f!]
+      (let [v (volatile! nil)]
+        (vreset! v v)
+        (f/-subscribe s
+                      (fn [x]
+                        (when (not= x @v)
+                          (vreset! v x)
+                          (f! x))))))
+    (-call-with-immediate-value [_self sub f!]
+      (f/-call-with-immediate-value s sub #(f! %)))
+    (-unsubscribe [_self sub]
+      (let [result (f/-unsubscribe s sub)]
+        (on-unsubscribed)
+        result))))
+
+(defn- on-unsubscribe
+  "Callback when the subscribable unsubscribes / un-mounts from view.
+  We either decrement the subscription reference count if more subscription
+  references exist, or else we remove the cached value."
+  [query-vec]
+  (swap! subscriptions-cache
+         #(if (> (get-in % [query-vec :reference-count] 0) 1)
+            (update-in % [query-vec :reference-count] dec)
+            (dissoc % query-vec))))
+
+(defn- do-subscribe
+  "Resolves signals and return the result of either the
+  computation-fn or the cached previous value if the signals
+  were unchanged.
+  See: https://day8.github.io/re-frame/flows-advanced-topics/#caching"
+  [signals query-vec computation-fn]
+  (try
+    (let [signals' (cond
+                     (vector? signals) (map #(f/<! %) signals)
+                     (map? signals)    (map->resolved-signals signals)
+                     :else             (f/<! signals))
+
+          cached (when signals'
+                   (get-in @subscriptions-cache
+                           [query-vec :signals signals']))]
+
+      (or cached
+
+          (let [result (computation-fn signals' query-vec)]
+            (when signals'
+              (swap! subscriptions-cache assoc-in
+                     [query-vec :signals signals'] result))
+
+            result)))
+    (catch dynamic ex st
+           (on-unsubscribe query-vec)
+           (println (str "Error while calculating subscription " (first query-vec)
+                         " - " ex "\n" st)))))
 
 (deftype AppDB []
   protocol/Database
@@ -29,17 +89,15 @@
 
   (subscribe
     [_ signals computation-fn query-vec]
-    (f/$
-      (try
-        (computation-fn
-          (cond
-            (vector? signals) (map #(f/<! %) signals)
-            (map? signals)    (map->resolved-signals signals)
-            :else             (f/<! signals))
-          query-vec)
-        (catch dynamic ex st
-               (println (str "Error while calculating subscription " (first query-vec)
-                             " - " ex "\n" st))))))
+
+    ;; Increment reference count
+
+    (swap! subscriptions-cache update-in
+           [query-vec :reference-count] #((fnil inc 0) %))
+
+    (-> (do-subscribe signals query-vec computation-fn)
+        f/$
+        (rd-sub #(on-unsubscribe query-vec))))
 
   (ref
     [_]
