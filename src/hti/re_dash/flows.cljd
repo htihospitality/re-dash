@@ -121,6 +121,7 @@
 (def flow-interceptor
   (interceptors/->interceptor
     :re-dash/flow
+    nil
     (fn [{{db :db} :effects
           :as      context}]
       (let [old-db                           @app-db/app-db
@@ -139,8 +140,7 @@
                                     exec-flow-action)
                                 new-db)))
                           (or db old-db)
-                          sorted-ids))))
-    nil))
+                          sorted-ids))))))
 
 
 (defn sort-flow-ids
