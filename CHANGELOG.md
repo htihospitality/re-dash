@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.2.0 - 2025-03-24
+### Changes
+- Added Subscription Cache [PR 37](https://github.com/htihospitality/re-dash/pull/37)
+
 ## 1.1.3 - 2024-12-10
 ### Changes
 - Fixed flow execution order to consider custom interceptor changes [PR 36](https://github.com/htihospitality/re-dash/pull/36)
