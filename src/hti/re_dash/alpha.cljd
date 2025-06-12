@@ -448,6 +448,11 @@
   (dart:core/print
     (string/join "\r\n" [e st])))
 
+(defn- yield-event-loop
+  "Yields the event loop to allow other computations to execute between re-dash events.
+  This can help prevent UI jank when processing a large number of events in quick succession."
+  [] (-> Duration.zero da/Future.delayed await))
+
 (defn- do-dispatch
   "Process this event, then the next in the queue, until the queue is empty."
   [event-vec]
@@ -480,11 +485,13 @@
 
       (if-let [next-event-vec (dequeue)]
         (do-dispatch next-event-vec)
+        (await (yield-event-loop))
         (reset! processing? false)))
 
     (catch dynamic e st
            (print-ex e st)
            (if-let [next-event-vec (dequeue)]
+             (await (yield-event-loop))
              (do-dispatch next-event-vec)
              (reset! processing? false)))))
 
