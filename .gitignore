@@ -88,3 +88,11 @@
 /samples/event_queue/macos/
 /samples/event_queue/web/
 /samples/event_queue/windows/
+
+# IDE Environment
+
+.idea
+*.iml
+.envrc
+.fvm
+.fvmrc
