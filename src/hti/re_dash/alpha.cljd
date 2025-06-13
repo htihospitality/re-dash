@@ -450,8 +450,52 @@
 
 (defn- yield-event-loop
   "Yields the event loop to allow other computations to execute between re-dash events.
-  This can help prevent UI jank when processing a large number of events in quick succession."
+  This can help alleviate UI jank when processing a large number of events in quick succession."
   [] (-> Duration.zero da/Future.delayed await))
+
+(defn- do-single-dispatch
+  "Processes a single event, given its `event-vec`.
+   This is a helper function for [[exhaust-dispatch-queue]] and should not be called directly."
+  [event-vec]
+
+  (when (seq event-vec)
+    (try
+
+      (let [event-id (first event-vec)
+
+            {:keys [interceptors event-type] :as registered-event}
+            (event-id @events)
+
+            all-interceptors
+            (concat [do-fx-interceptor
+                     (prime-cofx-interceptor event-vec)]
+                    [flows/flow-interceptor]
+                    @global-interceptors
+                    interceptors)]
+
+        (when-not registered-event
+          (throw (Exception. (str "Event not found: " event-id))))
+
+        (->> (interceptors-sweep-before event-type event-vec all-interceptors)
+             await
+             (interceptors-sweep-after all-interceptors)
+             await))
+
+      (catch dynamic e st (print-ex e st)))))
+
+(defn- exhaust-dispatch-queue
+  "Consumes the entire event queue, processing each event in turn.
+   This is a helper function for [[do-dispatch]], and should not be called directly."
+  [event-vec]
+
+  (when (seq event-vec)
+    (await (do-single-dispatch event-vec))
+
+    (let [next-event-vec (dequeue)]
+      (when (seq next-event-vec)
+        (await (yield-event-loop))
+        ;; Use tail recursion to prevent potential stack overflows.
+        (recur next-event-vec)))))
 
 (defn- do-dispatch
   "Process this event, then the next in the queue, until the queue is empty."
@@ -459,41 +503,23 @@
 
   ;; Ensure we do not allow concurrent event execution.
   ;; We open the gate again later after all events on the queue have been processed.
+  ;;
   ;; In case of an exception, we'll log it to console and continue processing the remaining queue.
+  ;; Most exception handling is done by `do-single-dispatch`.
   (reset! processing? true)
 
   (try
-    (let [event-id (first event-vec)
 
-          {:keys [interceptors event-type] :as registered-event}
-          (event-id @events)
-
-          all-interceptors
-          (concat [do-fx-interceptor
-                   (prime-cofx-interceptor event-vec)]
-                  [flows/flow-interceptor]
-                  @global-interceptors
-                  interceptors)]
-
-      (when-not registered-event
-        (throw (Exception. (str "Event not found: " event-id))))
-
-      (->> (interceptors-sweep-before event-type event-vec all-interceptors)
-           await
-           (interceptors-sweep-after all-interceptors)
-           await)
-
-      (if-let [next-event-vec (dequeue)]
-        (do-dispatch next-event-vec)
-        (await (yield-event-loop))
-        (reset! processing? false)))
+    (await (exhaust-dispatch-queue event-vec))
 
     (catch dynamic e st
-           (print-ex e st)
-           (if-let [next-event-vec (dequeue)]
-             (await (yield-event-loop))
-             (do-dispatch next-event-vec)
-             (reset! processing? false)))))
+      ;; We shouldn't get here, but just in case...
+      (print-ex e st))
+    
+    (finally
+      ;; No matter what happens, when `exhaust-dispatch-queue` exits, always open the gate.
+      ;; This ensures we have a recoverable state in case of catestrophic failure.
+      (reset! processing? false))))
 
 (defn- trigger
   "Trigger do-dispatch if no event is busy processing"
