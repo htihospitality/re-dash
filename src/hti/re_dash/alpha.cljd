@@ -518,7 +518,7 @@
     
     (finally
       ;; No matter what happens, when `exhaust-dispatch-queue` exits, always open the gate.
-      ;; This ensures we have a recoverable state in case of catestrophic failure.
+      ;; This ensures we have a recoverable state in case of catastrophic failure.
       (reset! processing? false))))
 
 (defn- trigger
