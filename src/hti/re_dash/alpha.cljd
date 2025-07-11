@@ -449,9 +449,17 @@
     (string/join "\r\n" [e st])))
 
 (defn- yield-event-loop
-  "Yields the event loop to allow other computations to execute between re-dash events.
+  "Yields the event loop to allow other computations to execute among re-dash events.
   This can help alleviate UI jank when processing a large number of events in quick succession."
   [] (-> Duration.zero da/Future.delayed await))
+
+(defn- yield-event-loop?
+  "Returns true if we have been processing events more than half a frame, with a 60fps target."
+  [start-time]
+  (let [now (DateTime/now)
+        budget (/ 1 120) ;; == 1/60/2 == half a 60fps frame
+        elapsed (-> now (.difference start-time) .-inMilliseconds)]
+    (> elapsed budget)))
 
 (defn- do-single-dispatch
   "Processes a single event, given its `event-vec`.
@@ -485,17 +493,24 @@
 
 (defn- exhaust-dispatch-queue
   "Consumes the entire event queue, processing each event in turn.
-   This is a helper function for [[do-dispatch]], and should not be called directly."
-  [event-vec]
+   This is a helper function for [[do-dispatch]], and should not be called elsewhere.
+   The 2-arity version exists for internal use only and should not be used directly."
 
-  (when (seq event-vec)
-    (await (do-single-dispatch event-vec))
+  ([event-vec] (exhaust-dispatch-queue event-vec (DateTime/now)))
 
-    (let [next-event-vec (dequeue)]
-      (when (seq next-event-vec)
-        (await (yield-event-loop))
-        ;; Use tail recursion to prevent potential stack overflows.
-        (recur next-event-vec)))))
+  ([event-vec t]
+
+   (when (seq event-vec)
+     (await (do-single-dispatch event-vec))
+
+     (let [yield? (yield-event-loop? t)
+           next-event-vec (dequeue)]
+
+       (when (seq next-event-vec)
+         (when yield? (await (yield-event-loop)))
+         ;; Use tail recursion to prevent potential stack overflows.
+         (recur next-event-vec 
+                (if yield? (DateTime/now) t)))))))
 
 (defn- do-dispatch
   "Process this event, then the next in the queue, until the queue is empty."
