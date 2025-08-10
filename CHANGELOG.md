@@ -1,5 +1,9 @@
 # Change Log
 
+## 1.2.1 - 2025-08-10
+### Changes
+- Fixed issue in the `debug` interceptor when sending events - that did not include a `:db` effect - to `re-dash-inspector` causing the events to incorrectly show the whole `app-db` as changed in the `db-before` or `db-after` column.
+
 ## 1.2.0 - 2025-03-24
 ### Changes
 - Added Subscription Cache [PR 37](https://github.com/htihospitality/re-dash/pull/37)
