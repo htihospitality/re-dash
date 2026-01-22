@@ -1,17 +1,13 @@
 (ns hti.re-dash.alpha
   (:require ["dart:async" :as da]
             ["dart:collection" :as coll]
-            [cljd.flutter :as f]
             [cljd.core :as c]
-            [clojure.string :as string]
-            [clojure.data :as data]
+            [hti.re-dash.database.core :as database]
+            [hti.re-dash.database.protocol :as proto]
             [hti.re-dash.debugging :as debugging]
-            [hti.re-dash.interceptors :as interceptors]
             [hti.re-dash.flows :as flows]
             [hti.re-dash.flows-async :as flows-async]
-            [hti.re-dash.database.protocol :as proto]
-            [hti.re-dash.database.impl.app-db :as app-db]
-            [hti.re-dash.database.core :as database]))
+            [hti.re-dash.interceptors :as interceptors]))
 
 
 ;; Databases
@@ -445,63 +441,83 @@
 (defn- print-ex
   "Prints an exception including stack trace to the console"
   [e st]
-  (dart:core/print
-    (string/join "\r\n" [e st])))
+  (println (str e "\r\n" st)))
 
-(defn- do-dispatch
-  "Process this event, then the next in the queue, until the queue is empty."
-  [event-vec]
-
-  ;; Ensure we do not allow concurrent event execution.
-  ;; We open the gate again later after all events on the queue have been processed.
-  ;; In case of an exception, we'll log it to console and continue processing the remaining queue.
-  (reset! processing? true)
+(defn- process-event
+  "Processes a single event from the event queue."
+  [event]
 
   (try
-    (let [event-id (first event-vec)
 
-          {:keys [interceptors event-type] :as registered-event}
-          (event-id @events)
+    (let [event-id         (first event)
 
-          all-interceptors
-          (concat [do-fx-interceptor
-                   (prime-cofx-interceptor event-vec)]
-                  [flows/flow-interceptor]
-                  @global-interceptors
-                  interceptors)]
+          {:keys [interceptors event-type]
+           :as   registered-event}
+          (get @events event-id)
+
+          all-interceptors (concat [do-fx-interceptor
+                                    (prime-cofx-interceptor event)
+                                    flows/flow-interceptor]
+
+                                   @global-interceptors
+                                   interceptors)]
 
       (when-not registered-event
         (throw (Exception. (str "Event not found: " event-id))))
 
-      (->> (interceptors-sweep-before event-type event-vec all-interceptors)
-           await
-           (interceptors-sweep-after all-interceptors)
-           await)
+      (->> (interceptors-sweep-before event-type event all-interceptors) await
+           (interceptors-sweep-after all-interceptors) await))
 
-      (if-let [next-event-vec (dequeue)]
-        (do-dispatch next-event-vec)
-        (reset! processing? false)))
+    (catch dynamic e st (print-ex e st))))
+
+(defn- yield-event-loop
+  "Yields the event loop to allow rendering to take place."
+  [] (da/Future.delayed Duration.zero))
+
+(defn- process-event-queue
+  "Processes all events that exist in the event queue.
+
+  On invocation, a count of the current events in the queue is taken, and that number of events
+  are processed.
+
+  If new events have arrived since we started processing that batch, we first yield the event loop
+  to allow rendering to take place, before processing the next batch, and so on, until the queue
+  is empty."
+
+  []
+
+  (try
+
+    (loop [event-count (count events-queue)]
+
+      (if (<= event-count 0)
+        (let [event-count (count events-queue)]
+          (if (<= event-count 0)
+            (reset! processing? false)
+            (do (await (yield-event-loop))
+                (recur event-count))))
+
+        (let [event (dequeue)]
+          (some-> event process-event await)
+          (recur (dec event-count)))))
 
     (catch dynamic e st
-           (print-ex e st)
-           (if-let [next-event-vec (dequeue)]
-             (do-dispatch next-event-vec)
-             (reset! processing? false)))))
+                     (print-ex e st)
+                     (reset! processing? false))))
 
 (defn- trigger
-  "Trigger do-dispatch if no event is busy processing"
+  "Triggers the event processing loop if not already running.
+  This is deferred to the next event loop to batch multiple events and avoid stutter."
   []
-  (when (not @processing?)
-    (-> (dequeue) do-dispatch)))
+  (when (compare-and-set! processing? false true)
+    (Future.delayed Duration.zero process-event-queue)))
 
 (defn- enqueue
-  "Adds this event to the queue and trigger a do-dispatch.
-  Happens asynchronously so as to not hold up the event loop
-  and cause UI stutter"
+  "Adds an event to the event queue and attempts to initiate the event processing loop if it is not
+  already running."
   [event-vec]
-  (.add ^coll/Queue events-queue event-vec)
+  (.add events-queue event-vec)
   (trigger))
-
 
 ;; Events
 
@@ -614,7 +630,7 @@
   which identifies the kind of event.
 
   It is an error to use `dispatch-sync` within an event handler because
-  you can't immediately process an new event when one is already
+  you can't immediately process a new event when one is already
   part way through being processed.
 
   Generally, avoid using this function, and instead, use `dispatch`.
@@ -630,7 +646,9 @@
       (dispatch-sync [:sing :falsetto \"piano accordion\"])
   "
   [event-vec]
-  (do-dispatch event-vec))
+  (when (compare-and-set! processing? false true)
+    (await (process-event event-vec))
+    (reset! processing? false)))
 
 (defn dispatch
   "Queue `event` for processing (handling).
